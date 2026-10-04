@@ -4,8 +4,6 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -30,7 +28,7 @@ public class NotificationEntity {
     @Column(name = "person_id", nullable = false)
     private Integer personId;
 
-    @Enumerated(EnumType.STRING)
+    // String, no el enum: el mapper guarda getType().name() y lee con NotificationType.valueOf().
     @Column(name = "notification_type", nullable = false, length = 50)
     private String notificationType;
 

@@ -16,8 +16,10 @@ import lombok.Setter;
  * Mapeo de shared.audit (solo INSERT: append-only, la aplicación nunca la lee).
  * La crea rtm-iam-db; este servicio solo tiene permiso de INSERT.
  */
+// schema = "shared" es obligatorio: spring.jpa.properties.hibernate.default_schema pone booking
+// como schema por defecto, y sin esto Hibernate buscaría booking.audit, que no existe.
 @Entity
-@Table(name = "audit")
+@Table(schema = "shared", name = "audit")
 @Getter
 @Setter
 @NoArgsConstructor

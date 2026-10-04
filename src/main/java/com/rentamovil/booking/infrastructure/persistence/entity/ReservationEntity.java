@@ -5,8 +5,6 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -28,11 +26,11 @@ public class ReservationEntity {
     @Column(name = "reservation_id")
     private Integer id;
 
-    /** FK a iam.person (rtm-iam-db). Sin relación JPA: person es de otro servicio. */
+    /** FK a iam.person (rtm-iam-db). Sin relaciÃ³n JPA: person es de otro servicio. */
     @Column(name = "client_id", nullable = false)
     private Integer clientId;
 
-    /** Sin FK todavía: fleet.vehicle no existe (ver rtm-booking-reservation-db/README). */
+    /** Sin FK todavÃ­a: fleet.vehicle no existe (ver rtm-booking-reservation-db/README). */
     @Column(name = "vehicle_id", nullable = false)
     private Integer vehicleId;
 
@@ -64,7 +62,8 @@ public class ReservationEntity {
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 
-    @Enumerated(EnumType.STRING)
+    // String, no el enum: el estado se guarda y se lee como texto (el CHECK de la tabla lo valida
+    // igual). El mapper convierte con getStatus().name() y ReservationStatus.valueOf().
     @Column(name = "status", nullable = false, length = 30)
     private String status;
 }

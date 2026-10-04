@@ -5,8 +5,6 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -31,7 +29,7 @@ public class RentalEntity {
     @Column(name = "reservation_id", nullable = false)
     private Integer reservationId;
 
-    /** Sin FK todavía: telemetry.gps no existe. El Administrador lo indica en el pickup. */
+    /** Sin FK todavÃ­a: telemetry.gps no existe. El Administrador lo indica en el pickup. */
     @Column(name = "gps_id", nullable = false)
     private Integer gpsId;
 
@@ -48,7 +46,7 @@ public class RentalEntity {
     @Column(name = "final_mileage", precision = 10, scale = 2)
     private BigDecimal finalMileage;
 
-    @Enumerated(EnumType.STRING)
+    // String, no el enum: igual que en ReservationEntity, el mapper hace la conversiÃ³n.
     @Column(name = "status", nullable = false, length = 30)
     private String status;
 }
