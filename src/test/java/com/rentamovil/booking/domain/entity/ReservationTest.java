@@ -131,15 +131,29 @@ class ReservationTest {
     }
 
     @Test
-    @DisplayName("INV-003: la fecha de devolución se amplía pero nunca se acorta")
-    void soloSePuedeAmpliarLaFecha() {
+    @DisplayName("Cambiar la sucursal de devolución no toca las fechas ni el precio")
+    void cambiarSucursalNoTocaFechasNiPrecio() {
         Reservation reserva = confirmed();
 
-        assertThatThrownBy(() -> reserva.extendEndDate(END.minusDays(1)))
-                .isInstanceOf(InvalidDateRangeException.class)
-                .hasMessageContaining("ampliarse");
+        Reservation cambiada = reserva.changeReturnBranch(99, END.minusDays(10));
 
-        assertThat(reserva.extendEndDate(END.plusDays(2)).getEndDate()).isEqualTo(END.plusDays(2));
+        assertThat(cambiada.getStartDate()).isEqualTo(START);
+        assertThat(cambiada.getEndDate()).isEqualTo(END);
+        assertThat(cambiada.getTotalAmount()).isEqualByComparingTo(reserva.getTotalAmount());
+    }
+
+    @Test
+    @DisplayName("Una reserva cancelada o completada ya no cambia de sucursal")
+    void reservaCerradaNoCambiaDeSucursal() {
+        Reservation cancelada = newReservation().transitionTo(ReservationStatus.CANCELLED);
+        Reservation completada = confirmed().transitionTo(ReservationStatus.COMPLETED);
+
+        assertThatThrownBy(() -> cancelada.changeReturnBranch(99, END.minusDays(10)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("cancelada");
+        assertThatThrownBy(() -> completada.changeReturnBranch(99, END.minusDays(10)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("completada");
     }
 
     @Test

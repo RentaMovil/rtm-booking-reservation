@@ -95,24 +95,22 @@ public class Reservation {
     }
 
     /**
-     * INV-003: end_date solo se puede ampliar, nunca acortar. La fecha de recogida y el vehículo
-     * tampoco cambian (INV-002).
-     */
-    public Reservation extendEndDate(LocalDateTime newEndDate) {
-        validateDates(this.startDate, newEndDate);
-        if (!newEndDate.isAfter(this.endDate)) {
-            throw new InvalidDateRangeException("INVALID_DATE_RANGE",
-                    "La fecha de devolución solo puede ampliarse, no acortarse");
-        }
-        return with(newEndDate, this.returnBranchId);
-    }
-
-    /**
-     * INV-013: la sucursal de devolución se cambia hasta 3 días antes de end_date — la misma
-     * ventana que la cancelación (INV-004). El plazo se evalúa en la aplicación porque un CHECK
-     * de SQL Server no puede confiar en GETDATE().
+     * HU-BOOKING-005: de una reserva solo se puede modificar la sucursal de devolución. Las fechas,
+     * el vehículo, la sucursal de recogida y el seguro quedan fijos desde que se crea (INV-002):
+     * cambiarlos alteraría el precio ya calculado.
+     *
+     * <p>Solo en una reserva vigente (PENDING_PAYMENT, PENDING_REVIEW o CONFIRMED): una cancelada
+     * o completada ya no se modifica.
+     *
+     * <p>INV-013: hasta 3 días antes de end_date. El plazo se evalúa en la aplicación porque un
+     * CHECK de SQL Server no puede confiar en GETDATE().
      */
     public Reservation changeReturnBranch(Integer newReturnBranchId, LocalDateTime now) {
+        if (status == ReservationStatus.CANCELLED || status == ReservationStatus.COMPLETED) {
+            throw new BusinessRuleException("RESERVATION_NOT_MODIFIABLE",
+                    "Una reserva " + (status == ReservationStatus.CANCELLED ? "cancelada" : "completada")
+                            + " ya no se puede modificar");
+        }
         LocalDateTime deadline = this.endDate.minusDays(3);
         if (now.isAfter(deadline)) {
             throw new BusinessRuleException("RETURN_BRANCH_LOCKED",

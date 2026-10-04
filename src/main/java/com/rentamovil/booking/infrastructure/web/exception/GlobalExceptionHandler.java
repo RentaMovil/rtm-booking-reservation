@@ -67,7 +67,7 @@ public class GlobalExceptionHandler {
         return new ErrorResponse("NOT_FOUND", e.getMessage());
     }
 
-    /** INV-003, INV-004, INV-012, INV-013 y las transiciones de estado inválidas. */
+    /** INV-004, INV-012, INV-013, reservas no modificables y las transiciones de estado inválidas. */
     @ExceptionHandler(BusinessRuleException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ErrorResponse handleBusinessRule(BusinessRuleException e) {

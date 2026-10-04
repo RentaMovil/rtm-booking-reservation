@@ -30,11 +30,10 @@ public interface ReservationUseCases {
     Reservation cancel(Integer id, Integer clientId);
 
     /**
-     * HU-BOOKING-005: ampliar la fecha de devolución (INV-003: solo ampliar) o cambiar la
-     * sucursal de devolución (INV-013: hasta 3 días antes de end_date).
+     * HU-BOOKING-005: cambiar la sucursal de devolución, lo único modificable de una reserva.
+     * INV-013: hasta 3 días antes de end_date.
      */
-    Reservation modify(Integer id, Integer clientId, LocalDateTime newEndDate,
-                       Integer newReturnBranchId);
+    Reservation changeReturnBranch(Integer id, Integer clientId, Integer newReturnBranchId);
 
     /** Rango ocupado de un vehículo. Responde a fleet-maintenance, sin JWT. */
     List<OccupiedRange> vehicleOccupancy(Integer vehicleId, LocalDateTime from, LocalDateTime to);

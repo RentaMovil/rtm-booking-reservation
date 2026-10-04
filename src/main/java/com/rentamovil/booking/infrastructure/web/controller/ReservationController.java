@@ -74,15 +74,15 @@ public class ReservationController {
     }
 
     /**
-     * HU-BOOKING-005: ampliar la fecha de devolución (INV-003) o cambiar la sucursal de
-     * devolución (INV-013). Solo se toca lo que venga en el body.
+     * HU-BOOKING-005: cambiar la sucursal de devolución (INV-013). Es lo único modificable de una
+     * reserva; enviar newEndDate responde 400.
      */
     @PatchMapping("/{id}")
     public ReservationResponse modify(@CurrentUser AuthenticatedUser currentUser,
                                       @PathVariable Integer id,
-                                      @RequestBody ModifyReservationRequest request) {
-        return ReservationResponse.from(reservations.modify(id, currentUser.getPersonId(),
-                request.getNewEndDate(), request.getNewReturnBranchId()));
+                                      @Valid @RequestBody ModifyReservationRequest request) {
+        return ReservationResponse.from(reservations.changeReturnBranch(id, currentUser.getPersonId(),
+                request.getNewReturnBranchId()));
     }
 
     /** HU-BOOKING-006: cancelar. INV-004: hasta 3 días antes. INV-005: sin recargo. */

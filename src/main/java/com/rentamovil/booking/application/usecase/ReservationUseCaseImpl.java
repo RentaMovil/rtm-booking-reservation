@@ -155,46 +155,28 @@ public class ReservationUseCaseImpl implements ReservationUseCases {
     }
 
     @Override
-    public Reservation modify(Integer id, Integer clientId, LocalDateTime newEndDate,
-                              Integer newReturnBranchId) {
+    public Reservation changeReturnBranch(Integer id, Integer clientId, Integer newReturnBranchId) {
         Reservation reservation = findById(id);
 
+        // No se modifica la reserva de otra persona, aunque se conozca su id.
         if (!reservation.getClientId().equals(clientId)) {
             throw new ResourceNotFoundException("La reserva no existe");
         }
 
-        boolean branchChanged = newReturnBranchId != null
-                && !newReturnBranchId.equals(reservation.getReturnBranchId());
-
-        Reservation modified = reservation;
-        if (newEndDate != null) {
-            // INV-003: solo ampliar, nunca acortar.
-            modified = modified.extendEndDate(newEndDate);
-        }
-        if (branchChanged) {
-            // INV-013: hasta 3 días antes de end_date.
-            modified = modified.changeReturnBranch(newReturnBranchId, LocalDateTime.now());
-        }
-        if (newEndDate == null && !branchChanged) {
+        // Misma sucursal: no hay nada que guardar, notificar ni auditar.
+        if (newReturnBranchId.equals(reservation.getReturnBranchId())) {
             return reservation;
         }
 
-        Reservation saved = reservationRepository.save(modified);
+        // Estado vigente e INV-013 (hasta 3 días antes de end_date): los valida el dominio.
+        Reservation saved = reservationRepository.save(
+                reservation.changeReturnBranch(newReturnBranchId, LocalDateTime.now()));
 
-        if (newEndDate != null) {
-            events.publish("ReservationReturnDateExtended", Map.of(
-                    "reservationId", id, "newEndDate", newEndDate.toString()));
-            notificationRepository.save(Notification.aboutReservation(clientId,
-                    NotificationType.RESERVATION_RETURN_DATE_EXTENDED,
-                    "La fecha de devolución de tu reserva #" + id + " cambió.", id));
-        }
-        if (branchChanged) {
-            events.publish("ReservationReturnBranchChanged", Map.of(
-                    "reservationId", id, "newReturnBranchId", newReturnBranchId));
-            notificationRepository.save(Notification.aboutReservation(clientId,
-                    NotificationType.RESERVATION_RETURN_BRANCH_CHANGED,
-                    "La sucursal de devolución de tu reserva #" + id + " cambió.", id));
-        }
+        events.publish("ReservationReturnBranchChanged", Map.of(
+                "reservationId", id, "newReturnBranchId", newReturnBranchId));
+        notificationRepository.save(Notification.aboutReservation(clientId,
+                NotificationType.RESERVATION_RETURN_BRANCH_CHANGED,
+                "La sucursal de devolución de tu reserva #" + id + " cambió.", id));
 
         audit.record(clientId, "RESERVATION_MODIFIED", "reservation", id, null);
         return saved;
