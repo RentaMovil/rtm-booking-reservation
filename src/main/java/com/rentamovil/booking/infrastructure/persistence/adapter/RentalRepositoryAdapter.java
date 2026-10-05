@@ -46,4 +46,13 @@ public class RentalRepositoryAdapter implements RentalRepositoryPort {
                 .map(PersistenceMapper::toDomain)
                 .toList();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Rental> findAll() {
+        return jpaRepository.findAllByOrderByActualStartDateDesc()
+                .stream()
+                .map(PersistenceMapper::toDomain)
+                .toList();
+    }
 }

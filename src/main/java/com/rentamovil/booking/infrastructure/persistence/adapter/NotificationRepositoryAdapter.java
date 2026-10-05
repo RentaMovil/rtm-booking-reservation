@@ -45,4 +45,16 @@ public class NotificationRepositoryAdapter implements NotificationRepositoryPort
     public long countUnread(Integer personId) {
         return jpaRepository.countByPersonIdAndReadFalse(personId);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsByInvoiceId(Integer invoiceId) {
+        return jpaRepository.existsByInvoiceId(invoiceId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsByMaintenanceIdAndPersonId(Integer maintenanceId, Integer personId) {
+        return jpaRepository.existsByMaintenanceIdAndPersonId(maintenanceId, personId);
+    }
 }

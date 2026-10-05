@@ -42,6 +42,17 @@ public class GlobalExceptionHandler {
         return new ErrorResponse("VALIDATION_ERROR", "El cuerpo de la petición no es un JSON válido");
     }
 
+    /** Un evento de /internal/events sin la estructura esperada (tipo desconocido, campo faltante). */
+    @ExceptionHandler(InvalidEventException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInvalidEvent(InvalidEventException e) {
+        if (e.getField() == null) {
+            return new ErrorResponse(e.getCode(), e.getMessage());
+        }
+        return new ErrorResponse(e.getCode(), "El evento no tiene la estructura esperada",
+                List.of(new ErrorResponse.FieldError(e.getField(), e.getMessage())));
+    }
+
     /** HU-BOOKING-003 escenario 2, e INV-003 al intentar acortar. */
     @ExceptionHandler(InvalidDateRangeException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)

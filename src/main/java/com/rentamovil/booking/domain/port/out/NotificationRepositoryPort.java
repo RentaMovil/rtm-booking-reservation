@@ -18,8 +18,14 @@ public interface NotificationRepositoryPort {
     /** Para el badge de la campanita. */
     long countUnread(Integer personId);
 
+    /** Si ya se notificó esta factura (InvoiceGenerated repetido). */
+    boolean existsByInvoiceId(Integer invoiceId);
+
+    /** Si ya se notificó este mantenimiento a esta persona (MaintenanceCompleted repetido). */
+    boolean existsByMaintenanceIdAndPersonId(Integer maintenanceId, Integer personId);
+
     // NOTE: events.md dice que se usa el eventId como clave de idempotencia para no duplicar
     // notificaciones. Eso necesita una tabla de eventos procesados, que 06-data/models.md no
-    // define — y models.md es la fuente de verdad del esquema. Hasta que exista, las reacciones
-    // a eventos relied on que la transición de estado sea idempotente (que sí lo es).
+    // define — y models.md es la fuente de verdad del esquema. Mientras no exista, las reacciones
+    // a eventos deduplican por estado de la reserva y por invoice_id / maintenance_id.
 }

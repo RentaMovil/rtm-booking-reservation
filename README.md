@@ -52,7 +52,10 @@ Lo que todavía no funciona depende de servicios que aún no existen:
 | Validar que una sucursal exista | `fleet-maintenance` |
 
 Mientras `fleet-maintenance` no exista, crear una reserva responde `409 FLEET_SERVICE_UNAVAILABLE`
-a propósito: el servicio no inventa precios. La sección
+a propósito: el servicio no inventa precios.
+
+Mientras `payment-billing` no exista, el flujo de pago se puede probar enviando sus eventos a mano a
+`POST /internal/events` (ver [Eventos de dominio](#eventos-de-dominio)). La sección
 [Integración con otros servicios](#integración-con-otros-servicios) detalla qué cambia en este
 código cuando cada uno exista.
 
@@ -125,9 +128,10 @@ Reglas principales (las `INV-xxx` son los invariantes del dominio):
   reserva vigente: una cancelada o completada no se modifica.
 - Cancelar es sin recargo, hasta 3 días antes de la fecha de **recogida** (`start_date`)
   (INV-004, INV-005).
-- Una reserva sin pago aprobado se cancela sola pasado el plazo configurado (INV-015). Lo hace
-  `ReservationExpirationJob`, que corre cada hora y registra la acción en auditoría como acción
-  de sistema.
+- Una reserva cuyo cliente **no subió el comprobante** (`PENDING_PAYMENT`) se cancela sola pasado
+  el plazo configurado desde su creación (INV-015). Lo hace `ReservationExpirationJob`, que corre
+  cada hora y registra la acción en auditoría como acción de sistema. Una reserva `PENDING_REVIEW`
+  **no expira**: el comprobante ya se subió y la decide el Administrador.
 
 Una **renta** (`rental`) solo existe a partir del pickup: empieza en `IN_PROGRESS` y pasa a
 `COMPLETED` al registrar la devolución con fecha y kilometraje final.
@@ -209,12 +213,16 @@ docker compose up -d --build
 | POST | `/rentals/{reservationId}/pickup` | ADMIN | HU-RENTAL-001 | 201 · 401 · 403 · 404 · 409 `RESERVATION_NOT_CONFIRMED` / `RENTAL_ALREADY_STARTED` |
 | POST | `/rentals/{id}/return` | ADMIN | HU-RENTAL-002 | 200 · 401 · 403 · 404 · 409 `INVALID_MILEAGE` |
 | GET | `/rentals/in-progress` | ADMIN | — | 200 · 401 · 403 |
+| GET | `/rentals/admin` | ADMIN | — | 200 · 401 · 403 |
 | GET | `/notifications` | Bearer | HU-NOTIF-001 | 200 · 401 |
 | PATCH | `/notifications/{id}/read` | Bearer | HU-NOTIF-001 | 200 · 401 · 404 |
 | GET | `/internal/reservations/vehicle-occupancy` | sin JWT | consumo interno de flota | 200 · 400 |
+| POST | `/internal/events` | sin JWT | eventos de pagos y flota | 200 · 400 `INVALID_EVENT` / `UNKNOWN_EVENT_TYPE` · 409 |
 
 - `GET /reservations/insurance-types` es público: el cliente ve los planes antes de iniciar
   sesión. Con `startDate` y `endDate` devuelve además el costo total de cada plan para ese rango.
+- `GET /rentals/in-progress` trae solo las rentas abiertas; `GET /rentals/admin` trae todas,
+  incluidas las cerradas, más recientes primero.
 - `PATCH /reservations/{id}` solo acepta `newReturnBranchId`. Enviar `newEndDate` responde `400`:
   la fecha de devolución no se modifica.
 - `/internal/*` no lleva JWT a propósito: lo consumen otros servicios, no personas. El api-gateway
@@ -240,9 +248,27 @@ Un listener que falla no detiene a los demás.
 **Publica:** `ReservationCreated`, `ReservationCancelled`, `ReservationExpired`,
 `ReservationReturnBranchChanged`, `RentalStarted`, `RentalCompleted`.
 
-**Sabe procesar** (de forma idempotente, ya implementado en `PaymentEventUseCases`):
-`PaymentCompleted`, `PaymentRejected`, `InvoiceGenerated` (de `payment-billing`) y
-`MaintenanceCompleted` (de `fleet-maintenance`).
+**Recibe** por `POST /internal/events` (implementado en `PaymentEventUseCases`):
+
+| `type` | `payload` | Efecto |
+|---|---|---|
+| `PaymentSubmitted` | `reservationId`, `paymentId` | `PENDING_PAYMENT` → `PENDING_REVIEW` (el cliente subió el comprobante) |
+| `PaymentCompleted` | `reservationId`, `paymentId`, `actorUserId` (opcional) | `PENDING_REVIEW` → `CONFIRMED` + notificación `PAYMENT_APPROVED` |
+| `PaymentRejected` | `reservationId`, `paymentId`, `outcome` (`RETRY_ALLOWED` o `RESERVATION_CANCELLED`), `rejectionReason` (opcional) | → `PENDING_PAYMENT` o `CANCELLED` + notificación `PAYMENT_REJECTED` |
+| `InvoiceGenerated` | `reservationId`, `invoiceId`, `paymentId` | Notificación de factura disponible |
+| `MaintenanceCompleted` | `personId`, `maintenanceId`, `vehicleName` | Notificación `MAINTENANCE_COMPLETED` |
+
+```bash
+curl -X POST http://localhost:3003/internal/events -H "Content-Type: application/json" \
+  -d '{"eventId":"evt-1","type":"PaymentSubmitted","payload":{"reservationId":12,"paymentId":40}}'
+# {"type":"PaymentSubmitted","eventId":"evt-1","result":"PROCESSED"}
+```
+
+**Idempotencia.** Un evento repetido responde `200` con `"result":"DUPLICATE_IGNORED"`: no cambia
+el estado ni vuelve a notificar. La deduplicación es por estado de la reserva (si ya está en el
+estado al que la llevaría el evento, o más adelante) y por `invoice_id` / `maintenance_id` en las
+notificaciones; no por `eventId`, porque eso necesitaría una tabla de eventos procesados que el
+modelo de datos no define.
 
 El estado del vehículo (`vehicle.status`) lo cambia `fleet-maintenance` al recibir
 `RentalStarted` / `RentalCompleted`; este servicio nunca lo escribe.
@@ -253,9 +279,15 @@ El estado del vehículo (`vehicle.status`) lo cambia `fleet-maintenance` al reci
 mvn test
 ```
 
-26 tests unitarios del dominio (`ReservationTest`, `RentalTest`, `InsuranceTypeTest`) que cubren
-invariantes, cálculo de totales, transiciones de estado y las reglas de modificación. No
-necesitan base de datos.
+Tests unitarios, sin base de datos ni servidor:
+
+- **Dominio** (`ReservationTest`, `RentalTest`, `InsuranceTypeTest`): invariantes, totales,
+  transiciones de estado y reglas de modificación.
+- **Eventos** (`PaymentEventUseCaseImplTest`): flujo de pago completo e idempotencia, con
+  repositorios en memoria (`src/test/.../support`).
+- **Expiración** (`ReservationExpirationJobTest`): solo expira `PENDING_PAYMENT`.
+- **Web** (`InternalEventControllerTest`, `AdminBookingControllerTest`): validación de eventos y
+  permisos de administrador.
 
 ## Probar el servicio
 
@@ -283,8 +315,9 @@ Es la pieza central y se decide una sola vez para todo el sistema:
   proceso (HTTP hacia endpoints internos de cada servicio, o un broker como RabbitMQ). Implementa
   el mismo `DomainEventPublisherPort`, así que todos los `events.publish(...)` de los casos de uso
   quedan iguales.
-- **Entrada:** un adaptador de entrada (controlador `/internal/...` o listener del broker) que
-  reciba los eventos de otros servicios y llame a `PaymentEventUseCases`.
+- **Entrada:** ya existe: `POST /internal/events` (`InternalEventController`) recibe los eventos y
+  llama a `PaymentEventUseCases`. Si se elige un broker, se agrega un listener que llame a los
+  mismos casos de uso.
 - El gateway no cambia: `/internal/**` nunca se expone hacia afuera.
 
 ### `fleet-maintenance`
@@ -294,7 +327,7 @@ Es la pieza central y se decide una sola vez para todo el sistema:
 | `infrastructure/fleet/` | Reemplazar `PendingVehicleAvailabilityAdapter` (hoy responde 409) por un cliente REST que implemente el mismo `VehicleAvailabilityPort` y llame a `GET /vehicles/{id}/availability?from=…&to=…`. Borrar o desactivar el provisional: no puede haber dos implementaciones del puerto |
 | `application.properties` / `.env.example` | URL de flota (`http://localhost:3002` en local, `http://fleet-maintenance:3002` en Docker) |
 | Validar sucursales | Puerto nuevo (por ejemplo `BranchCatalogPort`) con su adaptador REST, y una línea en el caso de uso de cambio de sucursal para validar que exista. Opcional si basta con la FK |
-| Eventos de entrada | `MaintenanceCompleted` → `onMaintenanceCompleted` (ya implementado) |
+| Eventos de entrada | Nada: flota envía `MaintenanceCompleted` a `POST /internal/events` |
 | Eventos de salida | Flota escucha `ReservationCreated`, `ReservationCancelled`, `ReservationReturnBranchChanged`, `RentalStarted` y `RentalCompleted` |
 | `rtm-booking-db` | Changeset `04_alter/002_add_fks_fleet.sql`: FKs de `reservation.vehicle_id`, `pickup_branch_id`, `return_branch_id` y `notification.maintenance_id` |
 
@@ -304,7 +337,7 @@ Desbloquea: crear reservas, validar sucursales y las notificaciones de mantenimi
 
 | Dónde | Qué cambia |
 |---|---|
-| Adaptador de entrada nuevo | Recibe `PaymentCompleted`, `PaymentRejected` e `InvoiceGenerated` y llama a `PaymentEventUseCases`. La lógica de confirmar, rechazar y notificar ya está escrita y es idempotente |
+| Nada en la entrada | `POST /internal/events` ya recibe `PaymentSubmitted`, `PaymentCompleted`, `PaymentRejected` e `InvoiceGenerated`. Pagos solo tiene que llamarlo con esos tipos |
 | Lo que pagos necesita de booking | El total de la reserva para validar el monto: `GET /reservations/{id}` o un endpoint interno |
 | `rtm-booking-db` | Changeset `04_alter/003_add_fks_payment.sql`: FKs de `notification.payment_id` y `notification.invoice_id` |
 

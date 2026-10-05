@@ -18,7 +18,8 @@ import com.rentamovil.booking.infrastructure.web.dto.ReservationResponse;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Listados de administración: HU-BOOKING-008 (reservas) y las rentas abiertas.
+ * Listados de administración: HU-BOOKING-008 (reservas), las rentas abiertas y el historial
+ * completo de rentas.
  *
  * <p><b>Por qué NO están bajo /admin/**:</b> el api-gateway solo enruta
  * /reservations/**, /rentals/** y /notifications/** hacia este servicio. Una ruta
@@ -50,6 +51,13 @@ public class AdminBookingController {
     public List<RentalResponse> listRentals(@CurrentUser AuthenticatedUser currentUser) {
         requireAdmin(currentUser);
         return rentals.findInProgress().stream().map(RentalResponse::from).toList();
+    }
+
+    /** Todas las rentas, incluidas las cerradas (COMPLETED), más recientes primero. */
+    @GetMapping("/rentals/admin")
+    public List<RentalResponse> listAllRentals(@CurrentUser AuthenticatedUser currentUser) {
+        requireAdmin(currentUser);
+        return rentals.findAll().stream().map(RentalResponse::from).toList();
     }
 
     private void requireAdmin(AuthenticatedUser currentUser) {

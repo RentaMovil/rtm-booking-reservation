@@ -22,11 +22,12 @@ public interface ReservationJpaRepository extends JpaRepository<ReservationEntit
     Optional<ReservationEntity> findByIdAndClientId(Integer id, Integer clientId);
 
     /**
-     * INV-015: reservas sin pago aprobado cuya reservation_date es más antigua que el corte.
-     * El job programado usa esto para expirarlas a CANCELLED.
+     * INV-015: reservas que siguen en PENDING_PAYMENT (nunca subieron comprobante) y cuya
+     * reservation_date es más antigua que el corte. El job programado las expira a CANCELLED.
+     * PENDING_REVIEW no expira: el comprobante ya se subió y lo decide el Administrador.
      */
     @Query("SELECT r FROM ReservationEntity r "
-            + "WHERE r.status IN ('PENDING_PAYMENT', 'PENDING_REVIEW') "
+            + "WHERE r.status = 'PENDING_PAYMENT' "
             + "AND r.reservationDate < :cutoff")
     List<ReservationEntity> findExpiredUnpaid(@Param("cutoff") LocalDateTime cutoff);
 

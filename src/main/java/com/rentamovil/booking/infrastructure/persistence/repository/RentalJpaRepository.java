@@ -13,4 +13,6 @@ public interface RentalJpaRepository extends JpaRepository<RentalEntity, Integer
     Optional<RentalEntity> findByReservationId(Integer reservationId);
 
     List<RentalEntity> findByStatusOrderByActualStartDateAsc(String status);
+
+    List<RentalEntity> findAllByOrderByActualStartDateDesc();
 }

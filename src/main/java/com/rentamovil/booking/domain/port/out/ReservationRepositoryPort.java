@@ -29,8 +29,9 @@ public interface ReservationRepositoryPort {
                                                     LocalDateTime to);
 
     /**
-     * INV-015: reservas PENDING_PAYMENT/PENDING_REVIEW cuya reservation_date es más antigua que
-     * el corte. Lo usa el job programado que las expira a CANCELLED.
+     * INV-015: reservas PENDING_PAYMENT (el cliente nunca subió el comprobante) cuya
+     * reservation_date es más antigua que el corte. Lo usa el job programado que las expira a
+     * CANCELLED. PENDING_REVIEW no se incluye: ya tiene comprobante y lo decide el Administrador.
      */
     List<Reservation> findExpiredUnpaid(LocalDateTime cutoff);
 
