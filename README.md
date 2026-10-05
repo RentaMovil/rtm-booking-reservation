@@ -47,12 +47,11 @@ Lo que todavía no funciona depende de servicios que aún no existen:
 
 | Función | Depende de |
 |---|---|
-| Crear reservas (precio y disponibilidad del vehículo) | `fleet-maintenance` |
 | Confirmar reservas (pago aprobado) y, por tanto, pickup y devolución en el flujo real | `payment-billing` y el canal de eventos entre servicios |
 | Validar que una sucursal exista | `fleet-maintenance` |
 
-Mientras `fleet-maintenance` no exista, crear una reserva responde `409 FLEET_SERVICE_UNAVAILABLE`
-a propósito: el servicio no inventa precios.
+Crear una reserva le pide a `fleet-maintenance` el precio y la disponibilidad. Si fleet no responde, la
+reserva falla con `409 FLEET_SERVICE_UNAVAILABLE`: el servicio no inventa precios.
 
 Mientras `payment-billing` no exista, el flujo de pago se puede probar enviando sus eventos a mano a
 `POST /internal/events` (ver [Eventos de dominio](#eventos-de-dominio)). La sección
@@ -77,7 +76,7 @@ src/main/java/com/rentamovil/booking/
 └── infrastructure/             Adaptadores
     ├── config/                   BeanConfig, WebConfig
     ├── events/                   InProcessEventDispatcher (eventos en memoria, sin broker)
-    ├── fleet/                    PendingVehicleAvailabilityAdapter (provisional)
+    ├── fleet/                    FleetVehicleClientAdapter (precio y disponibilidad), FleetEventForwarder (RentalStarted/Completed)
     ├── persistence/              Entidades JPA, repositorios Spring Data y adaptadores
     ├── scheduling/               ReservationExpirationJob
     ├── security/                 JwtKeyConfig, JwtVerifierAdapter
@@ -324,7 +323,7 @@ Es la pieza central y se decide una sola vez para todo el sistema:
 
 | Dónde | Qué cambia |
 |---|---|
-| `infrastructure/fleet/` | Reemplazar `PendingVehicleAvailabilityAdapter` (hoy responde 409) por un cliente REST que implemente el mismo `VehicleAvailabilityPort` y llame a `GET /vehicles/{id}/availability?from=…&to=…`. Borrar o desactivar el provisional: no puede haber dos implementaciones del puerto |
+| `infrastructure/fleet/` | **Hecho:** `FleetVehicleClientAdapter` llama a `GET /vehicles/{id}` (precio) y `/vehicles/{id}/availability`; `FleetEventForwarder` envía `RentalStarted`/`RentalCompleted` a `POST /internal/events` de fleet. URL en `FLEET_URL` |
 | `application.properties` / `.env.example` | URL de flota (`http://localhost:3002` en local, `http://fleet-maintenance:3002` en Docker) |
 | Validar sucursales | Puerto nuevo (por ejemplo `BranchCatalogPort`) con su adaptador REST, y una línea en el caso de uso de cambio de sucursal para validar que exista. Opcional si basta con la FK |
 | Eventos de entrada | Nada: flota envía `MaintenanceCompleted` a `POST /internal/events` |

@@ -6,11 +6,8 @@ import java.time.LocalDateTime;
 /**
  * Datos del vehículo y disponibilidad, que pertenecen al contexto Fleet & Maintenance.
  *
- * <p>El servicio dueño todavía no existe: no hay adaptador REST posible. Ver
- * {@code PendingVehicleAvailabilityAdapter}, que falla con un mensaje explícito en vez de
- * inventar un precio.
- *
- * <p>Cuando exista: GET fleet-maintenance:3002/vehicles/{id}/availability?from=Y&to=Z
+ * <p>Lo implementa {@code FleetVehicleClientAdapter}: GET fleet-maintenance:3002/vehicles/{id}
+ * (precio) y /vehicles/{id}/availability?from=Y&to=Z.
  */
 public interface VehicleAvailabilityPort {
 

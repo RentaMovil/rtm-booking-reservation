@@ -1,6 +1,6 @@
 package com.rentamovil.booking.infrastructure.web.controller;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,15 +37,17 @@ public class InternalReservationController {
     @GetMapping("/vehicle-occupancy")
     public VehicleOccupancyResponse vehicleOccupancy(
             @RequestParam Integer vehicleId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
 
-        if (!to.isAfter(from)) {
+        // El contrato (booking-reservation.yaml) usa fechas sin hora: se cubren los días completos,
+        // incluido el último, para no dar por libre un vehículo que se entrega ese mismo día
+        if (to.isBefore(from)) {
             throw new com.rentamovil.booking.domain.exception.InvalidDateRangeException(
-                    "INVALID_DATE_RANGE", "La fecha final debe ser posterior a la inicial");
+                    "INVALID_DATE_RANGE", "La fecha final no puede ser anterior a la inicial");
         }
 
-        var ranges = reservations.vehicleOccupancy(vehicleId, from, to);
+        var ranges = reservations.vehicleOccupancy(vehicleId, from.atStartOfDay(), to.plusDays(1).atStartOfDay());
         return new VehicleOccupancyResponse(vehicleId, ranges.isEmpty(),
                 ranges.stream()
                         .map(r -> new VehicleOccupancyResponse.OccupiedRange(

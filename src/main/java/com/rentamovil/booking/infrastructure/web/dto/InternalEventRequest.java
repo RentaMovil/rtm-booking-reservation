@@ -2,6 +2,8 @@ package com.rentamovil.booking.infrastructure.web.dto;
 
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -14,12 +16,14 @@ import lombok.NoArgsConstructor;
  * <pre>
  * {
  *   "eventId": "7f1c…",               (opcional: solo para trazabilidad en los logs)
- *   "type": "PaymentCompleted",
+ *   "eventType": "PaymentCompleted",
  *   "payload": { "reservationId": 12, "paymentId": 40, "actorUserId": 3 }
  * }
  * </pre>
  *
- * <p>Los campos que exige cada tipo los valida {@code InternalEventPayload}.
+ * <p>"eventType" es el nombre del sobre que usan todos los servicios (fleet incluido); "type" se
+ * sigue aceptando para no romper a quien ya lo envía así. Los campos que exige cada tipo los
+ * valida {@code InternalEventPayload}.
  */
 @Getter
 @NoArgsConstructor
@@ -29,7 +33,8 @@ public class InternalEventRequest {
     private String eventId;
 
     @NotBlank(message = "obligatorio")
-    private String type;
+    @JsonAlias("type")
+    private String eventType;
 
     @NotNull(message = "obligatorio")
     private Map<String, Object> payload;
