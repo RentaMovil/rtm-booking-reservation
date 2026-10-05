@@ -15,11 +15,14 @@ import lombok.Getter;
 public class VehicleOccupancyResponse {
 
     private final Integer vehicleId;
+    // El campo del contrato, el que lee fleet. available es su opuesto y se mantiene por compatibilidad
+    private final boolean occupied;
     private final boolean available;
     private final List<OccupiedRange> ranges;
 
     public VehicleOccupancyResponse(Integer vehicleId, boolean available, List<OccupiedRange> ranges) {
         this.vehicleId = vehicleId;
+        this.occupied = !available;
         this.available = available;
         this.ranges = ranges;
     }
