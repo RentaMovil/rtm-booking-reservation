@@ -15,4 +15,8 @@ public interface NotificationJpaRepository extends JpaRepository<NotificationEnt
     Optional<NotificationEntity> findByIdAndPersonId(Integer id, Integer personId);
 
     long countByPersonIdAndReadFalse(Integer personId);
+
+    boolean existsByInvoiceId(Integer invoiceId);
+
+    boolean existsByMaintenanceIdAndPersonId(Integer maintenanceId, Integer personId);
 }

@@ -16,4 +16,7 @@ public interface RentalRepositoryPort {
 
     /** HU-RENTAL-002: las rentas aún abiertas (para el panel de administración). */
     List<Rental> findInProgress();
+
+    /** Todas las rentas, abiertas y cerradas, más recientes primero (historial del Administrador). */
+    List<Rental> findAll();
 }

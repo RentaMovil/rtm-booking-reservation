@@ -12,6 +12,10 @@ public enum NotificationType {
     RESERVATION_CREATED,
     RESERVATION_CANCELLED,
     RESERVATION_RETURN_BRANCH_CHANGED,
+    /**
+     * Ya no se emite: la fecha de devolución no se puede modificar. Se conserva porque el CHECK
+     * de booking.notification lo admite y puede haber filas antiguas con este valor.
+     */
     RESERVATION_RETURN_DATE_EXTENDED,
     RESERVATION_EXPIRED,
     PAYMENT_APPROVED,

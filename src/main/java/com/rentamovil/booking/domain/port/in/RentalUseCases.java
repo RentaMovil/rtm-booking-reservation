@@ -25,4 +25,7 @@ public interface RentalUseCases {
 
     /** Las rentas abiertas, para el panel de administración. */
     List<Rental> findInProgress();
+
+    /** Todas las rentas, incluidas las cerradas: el historial del Administrador. */
+    List<Rental> findAll();
 }

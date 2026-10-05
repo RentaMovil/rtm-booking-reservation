@@ -19,7 +19,11 @@ import com.rentamovil.booking.domain.port.out.NotificationRepositoryPort;
 import com.rentamovil.booking.domain.port.out.ReservationRepositoryPort;
 
 /**
- * INV-015: una reserva sin pago aprobado 24 h después de creada se cancela sola.
+ * INV-015: una reserva cuyo cliente no subió el comprobante 24 h después de creada se cancela sola.
+ *
+ * <p>Solo expira PENDING_PAYMENT. Una reserva PENDING_REVIEW ya tiene el comprobante subido y
+ * espera la revisión del Administrador: cancelarla por tiempo castigaría al cliente por una demora
+ * que no es suya. Esa reserva la resuelve el Administrador aprobando o rechazando el pago.
  *
  * <p>Es la primera transición del sistema que no dispara un Administrador (events.md), por eso
  * se escribe en audit con user_id NULL — "acción de sistema", no de una persona.
@@ -53,7 +57,11 @@ public class ReservationExpirationJob {
     public void expireUnpaidReservations() {
         LocalDateTime cutoff = LocalDateTime.now().minusHours(windowHours);
 
-        List<Reservation> expired = reservationRepository.findExpiredUnpaid(cutoff);
+        // La consulta ya filtra PENDING_PAYMENT; el filtro se repite aquí para que la regla no
+        // dependa solo del SQL (y para poder probarla sin base de datos).
+        List<Reservation> expired = reservationRepository.findExpiredUnpaid(cutoff).stream()
+                .filter(reservation -> reservation.getStatus() == ReservationStatus.PENDING_PAYMENT)
+                .toList();
         if (expired.isEmpty()) {
             return;
         }

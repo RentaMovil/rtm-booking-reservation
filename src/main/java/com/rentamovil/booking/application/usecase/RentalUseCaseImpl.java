@@ -104,4 +104,9 @@ public class RentalUseCaseImpl implements RentalUseCases {
     public List<Rental> findInProgress() {
         return rentalRepository.findInProgress();
     }
+
+    @Override
+    public List<Rental> findAll() {
+        return rentalRepository.findAll();
+    }
 }

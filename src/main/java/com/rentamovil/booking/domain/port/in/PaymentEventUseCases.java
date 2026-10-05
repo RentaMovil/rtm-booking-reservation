@@ -3,24 +3,35 @@ package com.rentamovil.booking.domain.port.in;
 /**
  * Reacciones a los eventos de otros servicios (events.md → "Eventos consumidos").
  *
- * <p>Cada uno es idempotente: la garantía de entrega es at-least-once y el mismo evento puede
- * llegar dos veces.
+ * <p>La garantía de entrega es at-least-once: el mismo evento puede llegar dos veces. Cada método
+ * devuelve {@code true} si aplicó el cambio y {@code false} si el evento ya estaba aplicado y se
+ * ignoró. Un evento repetido no cambia el estado ni vuelve a notificar.
+ *
+ * <p>La deduplicación es por estado (y por invoice_id / maintenance_id en las notificaciones),
+ * no por eventId: guardar los eventos procesados necesitaría una tabla que 06-data/models.md no
+ * define.
  */
 public interface PaymentEventUseCases {
 
+    /**
+     * PaymentSubmitted: el cliente subió el comprobante. PENDING_PAYMENT → PENDING_REVIEW.
+     * Es el paso previo obligatorio a PaymentCompleted.
+     */
+    boolean onPaymentSubmitted(Integer reservationId, Integer paymentId);
+
     /** PaymentCompleted: PENDING_REVIEW → CONFIRMED. */
-    void onPaymentCompleted(Integer reservationId, Integer paymentId, Integer actorUserId);
+    boolean onPaymentCompleted(Integer reservationId, Integer paymentId, Integer actorUserId);
 
     /**
      * PaymentRejected: según outcome, PENDING_REVIEW → PENDING_PAYMENT (RETRY_ALLOWED) o
      * → CANCELLED (RESERVATION_CANCELLED). INV-016.
      */
-    void onPaymentRejected(Integer reservationId, Integer paymentId, String outcome,
-                           String rejectionReason);
+    boolean onPaymentRejected(Integer reservationId, Integer paymentId, String outcome,
+                              String rejectionReason);
 
     /** InvoiceGenerated: la factura va en la notificación de pago aprobado. */
-    void onInvoiceGenerated(Integer reservationId, Integer invoiceId, Integer paymentId);
+    boolean onInvoiceGenerated(Integer reservationId, Integer invoiceId, Integer paymentId);
 
     /** MaintenanceCompleted de fleet-maintenance. */
-    void onMaintenanceCompleted(Integer personId, Integer maintenanceId, String vehicleName);
+    boolean onMaintenanceCompleted(Integer personId, Integer maintenanceId, String vehicleName);
 }
