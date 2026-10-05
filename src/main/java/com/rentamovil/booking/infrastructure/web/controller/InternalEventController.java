@@ -41,7 +41,7 @@ public class InternalEventController {
     public InternalEventResponse receive(@Valid @RequestBody InternalEventRequest request) {
         InternalEventPayload payload = new InternalEventPayload(request.getPayload());
 
-        boolean applied = switch (request.getType()) {
+        boolean applied = switch (request.getEventType()) {
             case "PaymentSubmitted" -> paymentEvents.onPaymentSubmitted(
                     payload.requiredInt("reservationId"),
                     payload.requiredInt("paymentId"));
@@ -63,11 +63,11 @@ public class InternalEventController {
                     payload.requiredInt("maintenanceId"),
                     payload.requiredText("vehicleName"));
             default -> throw new InvalidEventException("UNKNOWN_EVENT_TYPE", "type",
-                    "Tipo de evento desconocido: " + request.getType());
+                    "Tipo de evento desconocido: " + request.getEventType());
         };
 
         String result = applied ? InternalEventResponse.PROCESSED : InternalEventResponse.DUPLICATE_IGNORED;
-        log.info("Evento {} (eventId={}): {}", request.getType(), request.getEventId(), result);
-        return new InternalEventResponse(request.getType(), request.getEventId(), result);
+        log.info("Evento {} (eventId={}): {}", request.getEventType(), request.getEventId(), result);
+        return new InternalEventResponse(request.getEventType(), request.getEventId(), result);
     }
 }

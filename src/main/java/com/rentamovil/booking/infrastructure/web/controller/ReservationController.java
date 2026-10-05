@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.rentamovil.booking.domain.entity.AuthenticatedUser;
-import com.rentamovil.booking.domain.exception.ForbiddenException;
+import com.rentamovil.booking.domain.exception.ResourceNotFoundException;
 import com.rentamovil.booking.domain.port.in.ReservationUseCases;
 import com.rentamovil.booking.infrastructure.web.auth.CurrentUser;
 import com.rentamovil.booking.infrastructure.web.dto.CreateReservationRequest;
@@ -68,7 +68,7 @@ public class ReservationController {
         var reservation = reservations.findById(id);
         if (!reservation.getClientId().equals(currentUser.getPersonId()) && !currentUser.isAdmin()) {
             // 404 y no 403: no se confirma que exista una reserva con ese id.
-            throw new ForbiddenException("La reserva no existe");
+            throw new ResourceNotFoundException("La reserva no existe");
         }
         return ReservationResponse.from(reservation);
     }
