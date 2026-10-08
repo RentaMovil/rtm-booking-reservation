@@ -8,11 +8,12 @@ import com.rentamovil.booking.domain.enums.ReservationStatus;
 
 import lombok.Getter;
 
-/** Respuesta de una reserva. El clientId no se expone: sale del token. */
+/** Respuesta de una reserva. clientId se expone para que admin pueda mostrar el titular. */
 @Getter
 public class ReservationResponse {
 
     private final Integer id;
+    private final Integer clientId;
     private final Integer vehicleId;
     private final Integer insuranceTypeId;
     private final Integer pickupBranchId;
@@ -25,13 +26,14 @@ public class ReservationResponse {
     private final BigDecimal totalAmount;
     private final ReservationStatus status;
 
-    private ReservationResponse(Integer id, Integer vehicleId, Integer insuranceTypeId,
+    private ReservationResponse(Integer id, Integer clientId, Integer vehicleId, Integer insuranceTypeId,
                                 Integer pickupBranchId, Integer returnBranchId,
                                 LocalDateTime reservationDate, LocalDateTime startDate,
                                 LocalDateTime endDate, BigDecimal vehicleSubtotal,
                                 BigDecimal insuranceSubtotal, BigDecimal totalAmount,
                                 ReservationStatus status) {
         this.id = id;
+        this.clientId = clientId;
         this.vehicleId = vehicleId;
         this.insuranceTypeId = insuranceTypeId;
         this.pickupBranchId = pickupBranchId;
@@ -48,6 +50,7 @@ public class ReservationResponse {
     public static ReservationResponse from(Reservation reservation) {
         return new ReservationResponse(
                 reservation.getId(),
+                reservation.getClientId(),
                 reservation.getVehicleId(),
                 reservation.getInsuranceTypeId(),
                 reservation.getPickupBranchId(),
