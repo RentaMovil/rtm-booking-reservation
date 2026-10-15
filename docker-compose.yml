@@ -1,0 +1,24 @@
+# Booking & Reservation en su propio contenedor. Antes hay que levantar rtm-iam-db (SQL Server +
+# base + tablas iam.*) y rtm-booking-reservation-db (schema booking), que comparten la red
+# "rentamovil".
+services:
+  booking-reservation:
+    build: .
+    container_name: rentamovil-booking-reservation
+    # Toma las variables del .env (contraseña de booking_app, clave pública de iam...)
+    env_file: .env
+    environment:
+      # Dentro de Docker la base no está en "localhost", sino en el contenedor "sqlserver"
+      DATABASE_URL: jdbc:sqlserver://sqlserver:1433;databaseName=rentamovil;encrypt=true;trustServerCertificate=true
+      FLEET_URL: http://fleet-maintenance:3002
+    ports:
+      - "${APP_BOOKING_RESERVATION_PORT:-3003}:3003"
+    networks:
+      rentamovil:
+        # El gateway la encuentra con este nombre: http://booking-reservation:3003
+        aliases: [booking-reservation]
+    restart: unless-stopped
+
+networks:
+  rentamovil:
+    external: true
