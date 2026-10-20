@@ -18,7 +18,13 @@ import com.rentamovil.booking.domain.exception.InvalidStatusTransitionException;
 import com.rentamovil.booking.support.InMemoryNotificationRepository;
 import com.rentamovil.booking.support.InMemoryReservationRepository;
 
-/** Reacciones a los eventos de pagos y flota: transiciones, notificaciones e idempotencia. */
+/**
+ * Reactions to payment and fleet events: transitions, notifications and idempotency.
+ *
+ * <p>A few assertions check {@code getMessage()}/{@code contains(...)} against the notification
+ * text the production code builds, which is in Spanish (production code wasn't translated, only
+ * this test file) — those substrings are intentionally left in Spanish to match the real text.
+ */
 class PaymentEventUseCaseImplTest {
 
     private static final Integer RESERVATION_ID = 12;
@@ -40,11 +46,11 @@ class PaymentEventUseCaseImplTest {
         return reservations.findById(RESERVATION_ID).orElseThrow().getStatus();
     }
 
-    // --- Tarea 2: comprobante subido ---
+    // --- Task 2: receipt uploaded ---
 
     @Test
-    @DisplayName("Comprobante subido: PENDING_PAYMENT pasa a PENDING_REVIEW, sin notificación")
-    void comprobanteSubidoPasaARevision() {
+    @DisplayName("Receipt uploaded: PENDING_PAYMENT moves to PENDING_REVIEW, no notification")
+    void uploadedReceiptMovesToReview() {
         givenReservation(ReservationStatus.PENDING_PAYMENT);
 
         assertThat(useCase.onPaymentSubmitted(RESERVATION_ID, PAYMENT_ID)).isTrue();
@@ -54,8 +60,8 @@ class PaymentEventUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Comprobante subido repetido: se ignora y no escribe nada")
-    void comprobanteRepetidoSeIgnora() {
+    @DisplayName("Repeated receipt upload: ignored, writes nothing")
+    void repeatedReceiptIsIgnored() {
         givenReservation(ReservationStatus.PENDING_REVIEW);
 
         assertThat(useCase.onPaymentSubmitted(RESERVATION_ID, PAYMENT_ID)).isFalse();
@@ -64,8 +70,8 @@ class PaymentEventUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Comprobante sobre una reserva cancelada: transición inválida")
-    void comprobanteSobreCanceladaFalla() {
+    @DisplayName("Receipt over a cancelled reservation: invalid transition")
+    void receiptOverCancelledFails() {
         givenReservation(ReservationStatus.CANCELLED);
 
         assertThatThrownBy(() -> useCase.onPaymentSubmitted(RESERVATION_ID, PAYMENT_ID))
@@ -73,8 +79,8 @@ class PaymentEventUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Pago aprobado sin comprobante previo: transición inválida (por eso existe PaymentSubmitted)")
-    void pagoAprobadoSinComprobanteFalla() {
+    @DisplayName("Payment approved without a prior receipt: invalid transition (that's why PaymentSubmitted exists)")
+    void approvedPaymentWithoutAReceiptFails() {
         givenReservation(ReservationStatus.PENDING_PAYMENT);
 
         assertThatThrownBy(() -> useCase.onPaymentCompleted(RESERVATION_ID, PAYMENT_ID, 3))
@@ -82,8 +88,8 @@ class PaymentEventUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Flujo completo: comprobante y luego pago aprobado deja la reserva CONFIRMED con una notificación")
-    void flujoCompletoConfirmaLaReserva() {
+    @DisplayName("Full flow: receipt then approved payment leaves the reservation CONFIRMED with one notification")
+    void fullFlowConfirmsTheReservation() {
         givenReservation(ReservationStatus.PENDING_PAYMENT);
 
         useCase.onPaymentSubmitted(RESERVATION_ID, PAYMENT_ID);
@@ -97,11 +103,11 @@ class PaymentEventUseCaseImplTest {
         });
     }
 
-    // --- Tarea 4: eventos repetidos no duplican notificaciones ---
+    // --- Task 4: repeated events don't duplicate notifications ---
 
     @Test
-    @DisplayName("Pago aprobado repetido: la segunda vez se ignora y no vuelve a notificar")
-    void pagoAprobadoRepetidoNoDuplica() {
+    @DisplayName("Repeated payment approved: the second time is ignored and doesn't notify again")
+    void repeatedApprovedPaymentDoesNotDuplicate() {
         givenReservation(ReservationStatus.PENDING_REVIEW);
 
         assertThat(useCase.onPaymentCompleted(RESERVATION_ID, PAYMENT_ID, 3)).isTrue();
@@ -111,8 +117,8 @@ class PaymentEventUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Pago aprobado atrasado sobre una reserva ya completada: se ignora sin error")
-    void pagoAprobadoAtrasadoSeIgnora() {
+    @DisplayName("A late approved payment over an already completed reservation: ignored without error")
+    void lateApprovedPaymentIsIgnored() {
         givenReservation(ReservationStatus.COMPLETED);
 
         assertThat(useCase.onPaymentCompleted(RESERVATION_ID, PAYMENT_ID, 3)).isFalse();
@@ -122,23 +128,23 @@ class PaymentEventUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Rechazo con reintento: vuelve a PENDING_PAYMENT; repetido no duplica la notificación")
-    void rechazoConReintento() {
+    @DisplayName("Rejection with retry: goes back to PENDING_PAYMENT; repeated doesn't duplicate the notification")
+    void rejectionWithRetry() {
         givenReservation(ReservationStatus.PENDING_REVIEW);
 
-        assertThat(useCase.onPaymentRejected(RESERVATION_ID, PAYMENT_ID, "RETRY_ALLOWED", "Ilegible")).isTrue();
-        assertThat(useCase.onPaymentRejected(RESERVATION_ID, PAYMENT_ID, "RETRY_ALLOWED", "Ilegible")).isFalse();
+        assertThat(useCase.onPaymentRejected(RESERVATION_ID, PAYMENT_ID, "RETRY_ALLOWED", "Illegible")).isTrue();
+        assertThat(useCase.onPaymentRejected(RESERVATION_ID, PAYMENT_ID, "RETRY_ALLOWED", "Illegible")).isFalse();
 
         assertThat(currentStatus()).isEqualTo(ReservationStatus.PENDING_PAYMENT);
         assertThat(notifications.all()).singleElement().satisfies(n -> {
             assertThat(n.getType()).isEqualTo(NotificationType.PAYMENT_REJECTED);
-            assertThat(n.getMessage()).contains("Puedes subir otro comprobante").contains("Ilegible");
+            assertThat(n.getMessage()).contains("Puedes subir otro comprobante").contains("Illegible");
         });
     }
 
     @Test
-    @DisplayName("Rechazo con cancelación: pasa a CANCELLED; repetido no duplica la notificación")
-    void rechazoConCancelacion() {
+    @DisplayName("Rejection with cancellation: moves to CANCELLED; repeated doesn't duplicate the notification")
+    void rejectionWithCancellation() {
         givenReservation(ReservationStatus.PENDING_REVIEW);
 
         assertThat(useCase.onPaymentRejected(RESERVATION_ID, PAYMENT_ID, "RESERVATION_CANCELLED", null)).isTrue();
@@ -150,8 +156,8 @@ class PaymentEventUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Rechazo con un outcome desconocido: error y no toca la reserva")
-    void outcomeDesconocido() {
+    @DisplayName("Rejection with an unknown outcome: error, doesn't touch the reservation")
+    void unknownOutcome() {
         givenReservation(ReservationStatus.PENDING_REVIEW);
 
         assertThatThrownBy(() -> useCase.onPaymentRejected(RESERVATION_ID, PAYMENT_ID, "MAYBE", null))
@@ -163,8 +169,8 @@ class PaymentEventUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Factura repetida: se notifica una sola vez por invoiceId")
-    void facturaRepetidaNoDuplica() {
+    @DisplayName("Repeated invoice: notified only once per invoiceId")
+    void repeatedInvoiceDoesNotDuplicate() {
         givenReservation(ReservationStatus.CONFIRMED);
 
         assertThat(useCase.onInvoiceGenerated(RESERVATION_ID, 90, PAYMENT_ID)).isTrue();
@@ -175,19 +181,19 @@ class PaymentEventUseCaseImplTest {
     }
 
     @Test
-    @DisplayName("Mantenimiento repetido: una notificación por persona y mantenimiento")
-    void mantenimientoRepetidoNoDuplica() {
+    @DisplayName("Repeated maintenance: one notification per person and maintenance")
+    void repeatedMaintenanceDoesNotDuplicate() {
         assertThat(useCase.onMaintenanceCompleted(CLIENT_ID, 5, "Kia Picanto")).isTrue();
         assertThat(useCase.onMaintenanceCompleted(CLIENT_ID, 5, "Kia Picanto")).isFalse();
-        // El mismo mantenimiento para otra persona sí se notifica.
+        // The same maintenance for a different person is notified.
         assertThat(useCase.onMaintenanceCompleted(99, 5, "Kia Picanto")).isTrue();
 
         assertThat(notifications.all()).extracting(Notification::getPersonId).containsExactly(CLIENT_ID, 99);
     }
 
     @Test
-    @DisplayName("Evento sobre una reserva que no existe: RESERVATION_NOT_FOUND")
-    void reservaInexistente() {
+    @DisplayName("Event over a reservation that doesn't exist: RESERVATION_NOT_FOUND")
+    void nonexistentReservation() {
         assertThatThrownBy(() -> useCase.onPaymentSubmitted(404, PAYMENT_ID))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasFieldOrPropertyWithValue("code", "RESERVATION_NOT_FOUND");

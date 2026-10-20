@@ -21,7 +21,7 @@ import com.rentamovil.booking.domain.port.in.RentalUseCases;
 import com.rentamovil.booking.domain.port.in.ReservationUseCases;
 import com.rentamovil.booking.infrastructure.web.dto.RentalResponse;
 
-/** GET /rentals/admin: el historial completo de rentas, solo para administradores. */
+/** GET /rentals/admin: the full rental history, admins only. */
 class AdminBookingControllerTest {
 
     private static final LocalDateTime PICKUP = LocalDateTime.of(2026, 11, 1, 10, 0);
@@ -34,13 +34,13 @@ class AdminBookingControllerTest {
     private final AuthenticatedUser client = new AuthenticatedUser(2, 2, "CLIENT", List.of());
 
     @Test
-    @DisplayName("Devuelve las rentas abiertas y también las cerradas")
-    void incluyeLasCerradas() {
-        Rental abierta = Rental.restore(2, 20, 301, 55, PICKUP.plusDays(3), null,
+    @DisplayName("Returns the open rentals and also the closed ones")
+    void includesTheClosedOnes() {
+        Rental open = Rental.restore(2, 20, 301, 55, PICKUP.plusDays(3), null,
                 new BigDecimal("1000.00"), null, RentalStatus.IN_PROGRESS);
-        Rental cerrada = Rental.restore(1, 10, 302, 56, PICKUP, PICKUP.plusDays(2),
+        Rental closed = Rental.restore(1, 10, 302, 56, PICKUP, PICKUP.plusDays(2),
                 new BigDecimal("500.00"), new BigDecimal("800.00"), RentalStatus.COMPLETED);
-        when(rentals.findAll()).thenReturn(List.of(abierta, cerrada));
+        when(rentals.findAll()).thenReturn(List.of(open, closed));
 
         List<RentalResponse> response = controller.listAllRentals(admin);
 
@@ -50,8 +50,8 @@ class AdminBookingControllerTest {
     }
 
     @Test
-    @DisplayName("Un cliente no puede ver el historial de rentas: 403")
-    void clienteNoPuede() {
+    @DisplayName("A client cannot see the rental history: 403")
+    void clientCannot() {
         assertThatThrownBy(() -> controller.listAllRentals(client))
                 .isInstanceOf(ForbiddenException.class);
 
