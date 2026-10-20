@@ -18,7 +18,7 @@ import com.rentamovil.booking.domain.port.out.DomainEventPublisherPort;
 import com.rentamovil.booking.support.InMemoryNotificationRepository;
 import com.rentamovil.booking.support.InMemoryReservationRepository;
 
-/** INV-015: solo expiran las reservas que nunca subieron comprobante. */
+/** INV-015: only reservations that never uploaded a receipt expire. */
 class ReservationExpirationJobTest {
 
     private final InMemoryReservationRepository reservations = new InMemoryReservationRepository();
@@ -65,8 +65,8 @@ class ReservationExpirationJobTest {
     }
 
     @Test
-    @DisplayName("Una reserva PENDING_PAYMENT con más de 24 h se cancela, se notifica y se audita")
-    void expiraLaQueNuncaSubioComprobante() {
+    @DisplayName("A PENDING_PAYMENT reservation older than 24h is cancelled, notified and audited")
+    void expiresTheOneThatNeverUploadedAReceipt() {
         givenReservation(1, ReservationStatus.PENDING_PAYMENT, 30);
 
         job.expireUnpaidReservations();
@@ -79,8 +79,8 @@ class ReservationExpirationJobTest {
     }
 
     @Test
-    @DisplayName("Una reserva PENDING_REVIEW no expira aunque tenga más de 24 h: ya subió el comprobante")
-    void noExpiraLaQueEstaEnRevision() {
+    @DisplayName("A PENDING_REVIEW reservation doesn't expire even past 24h: the receipt was already uploaded")
+    void doesNotExpireTheOneUnderReview() {
         givenReservation(1, ReservationStatus.PENDING_REVIEW, 30);
 
         job.expireUnpaidReservations();
@@ -92,8 +92,8 @@ class ReservationExpirationJobTest {
     }
 
     @Test
-    @DisplayName("Con varias reservas, solo expira la PENDING_PAYMENT vencida")
-    void soloExpiraLaQueCorresponde() {
+    @DisplayName("With several reservations, only the overdue PENDING_PAYMENT one expires")
+    void onlyExpiresTheRightOne() {
         givenReservation(1, ReservationStatus.PENDING_PAYMENT, 30);
         givenReservation(2, ReservationStatus.PENDING_REVIEW, 30);
         givenReservation(3, ReservationStatus.PENDING_PAYMENT, 2);

@@ -17,7 +17,7 @@ import com.rentamovil.booking.infrastructure.web.dto.InternalEventRequest;
 import com.rentamovil.booking.infrastructure.web.dto.InternalEventResponse;
 import com.rentamovil.booking.infrastructure.web.exception.InvalidEventException;
 
-/** POST /internal/events: valida la estructura y delega en PaymentEventUseCases. */
+/** POST /internal/events: validates the structure and delegates to PaymentEventUseCases. */
 class InternalEventControllerTest {
 
     private final PaymentEventUseCases useCases = mock(PaymentEventUseCases.class);
@@ -28,8 +28,8 @@ class InternalEventControllerTest {
     }
 
     @Test
-    @DisplayName("PaymentSubmitted delega en onPaymentSubmitted y responde PROCESSED")
-    void paymentSubmittedDelega() {
+    @DisplayName("PaymentSubmitted delegates to onPaymentSubmitted and responds PROCESSED")
+    void paymentSubmittedDelegates() {
         when(useCases.onPaymentSubmitted(12, 40)).thenReturn(true);
 
         InternalEventResponse response = send("PaymentSubmitted", Map.of("reservationId", 12, "paymentId", 40));
@@ -40,8 +40,8 @@ class InternalEventControllerTest {
     }
 
     @Test
-    @DisplayName("Un evento ya aplicado responde DUPLICATE_IGNORED (200, no es un error)")
-    void eventoRepetido() {
+    @DisplayName("An already-applied event responds DUPLICATE_IGNORED (200, not an error)")
+    void repeatedEvent() {
         when(useCases.onPaymentCompleted(12, 40, 3)).thenReturn(false);
 
         InternalEventResponse response = send("PaymentCompleted",
@@ -51,25 +51,25 @@ class InternalEventControllerTest {
     }
 
     @Test
-    @DisplayName("actorUserId es opcional en PaymentCompleted")
-    void actorOpcional() {
+    @DisplayName("actorUserId is optional in PaymentCompleted")
+    void actorIsOptional() {
         send("PaymentCompleted", Map.of("reservationId", 12, "paymentId", 40));
 
         verify(useCases).onPaymentCompleted(12, 40, null);
     }
 
     @Test
-    @DisplayName("PaymentRejected pasa el outcome y el motivo tal cual")
-    void paymentRejectedDelega() {
+    @DisplayName("PaymentRejected passes the outcome and the reason as-is")
+    void paymentRejectedDelegates() {
         send("PaymentRejected", Map.of("reservationId", 12, "paymentId", 40,
-                "outcome", "RETRY_ALLOWED", "rejectionReason", "Comprobante ilegible"));
+                "outcome", "RETRY_ALLOWED", "rejectionReason", "Illegible receipt"));
 
-        verify(useCases).onPaymentRejected(12, 40, "RETRY_ALLOWED", "Comprobante ilegible");
+        verify(useCases).onPaymentRejected(12, 40, "RETRY_ALLOWED", "Illegible receipt");
     }
 
     @Test
-    @DisplayName("InvoiceGenerated y MaintenanceCompleted delegan con sus campos")
-    void otrosEventos() {
+    @DisplayName("InvoiceGenerated and MaintenanceCompleted delegate with their fields")
+    void otherEvents() {
         send("InvoiceGenerated", Map.of("reservationId", 12, "invoiceId", 90, "paymentId", 40));
         send("MaintenanceCompleted", Map.of("personId", 7, "maintenanceId", 5, "vehicleName", "Kia Picanto"));
 
@@ -78,16 +78,16 @@ class InternalEventControllerTest {
     }
 
     @Test
-    @DisplayName("Los ids se aceptan también como texto numérico")
-    void idsComoTexto() {
+    @DisplayName("Ids are also accepted as numeric text")
+    void idsAsText() {
         send("PaymentSubmitted", Map.of("reservationId", "12", "paymentId", 40L));
 
         verify(useCases).onPaymentSubmitted(12, 40);
     }
 
     @Test
-    @DisplayName("Falta un campo obligatorio: 400 con el campo exacto y no llama al caso de uso")
-    void campoFaltante() {
+    @DisplayName("Missing a required field: 400 with the exact field, and the use case is never called")
+    void missingField() {
         assertThatThrownBy(() -> send("PaymentSubmitted", Map.of("paymentId", 40)))
                 .isInstanceOf(InvalidEventException.class)
                 .hasFieldOrPropertyWithValue("code", "INVALID_EVENT")
@@ -97,8 +97,8 @@ class InternalEventControllerTest {
     }
 
     @Test
-    @DisplayName("Un id con decimales no es válido")
-    void idConDecimales() {
+    @DisplayName("An id with decimals is not valid")
+    void idWithDecimals() {
         assertThatThrownBy(() -> send("PaymentSubmitted", Map.of("reservationId", 12.5, "paymentId", 40)))
                 .isInstanceOf(InvalidEventException.class)
                 .hasFieldOrPropertyWithValue("field", "payload.reservationId");
@@ -107,8 +107,8 @@ class InternalEventControllerTest {
     }
 
     @Test
-    @DisplayName("Un tipo de evento desconocido responde UNKNOWN_EVENT_TYPE")
-    void tipoDesconocido() {
+    @DisplayName("An unknown event type responds UNKNOWN_EVENT_TYPE")
+    void unknownEventType() {
         assertThatThrownBy(() -> send("PaymentRefunded", Map.of("reservationId", 12)))
                 .isInstanceOf(InvalidEventException.class)
                 .hasFieldOrPropertyWithValue("code", "UNKNOWN_EVENT_TYPE");

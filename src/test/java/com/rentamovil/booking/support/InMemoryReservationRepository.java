@@ -10,21 +10,21 @@ import com.rentamovil.booking.domain.entity.Reservation;
 import com.rentamovil.booking.domain.enums.ReservationStatus;
 import com.rentamovil.booking.domain.port.out.ReservationRepositoryPort;
 
-/** Repositorio de reservas en memoria: prueba los casos de uso sin base de datos. */
+/** In-memory reservation repository: tests the use cases without a database. */
 public class InMemoryReservationRepository implements ReservationRepositoryPort {
 
     private final Map<Integer, Reservation> rows = new LinkedHashMap<>();
     private int nextId = 1;
     private int saveCount = 0;
 
-    /** Carga un dato de prueba sin contarlo como escritura del caso de uso. */
+    /** Loads a test fixture without counting it as a write by the code under test. */
     public Reservation put(Reservation reservation) {
         rows.put(reservation.getId(), reservation);
         nextId = Math.max(nextId, reservation.getId() + 1);
         return reservation;
     }
 
-    /** Cuántas veces escribió el código bajo prueba. */
+    /** How many times the code under test wrote. */
     public int saveCount() {
         return saveCount;
     }
@@ -71,9 +71,9 @@ public class InMemoryReservationRepository implements ReservationRepositoryPort 
     }
 
     /**
-     * A propósito más amplio que la consulta real (que solo trae PENDING_PAYMENT): devuelve toda
-     * reserva anterior al corte, en cualquier estado. Así los tests prueban que la regla de
-     * expiración no depende solo del SQL.
+     * Intentionally broader than the real query (which only brings PENDING_PAYMENT): returns
+     * every reservation before the cutoff, in any status. This way the tests verify that the
+     * expiration rule doesn't depend solely on the SQL.
      */
     @Override
     public List<Reservation> findExpiredUnpaid(LocalDateTime cutoff) {

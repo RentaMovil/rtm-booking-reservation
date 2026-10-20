@@ -8,12 +8,12 @@ import java.util.Optional;
 import com.rentamovil.booking.domain.entity.Notification;
 import com.rentamovil.booking.domain.port.out.NotificationRepositoryPort;
 
-/** Repositorio de notificaciones en memoria. */
+/** In-memory notification repository. */
 public class InMemoryNotificationRepository implements NotificationRepositoryPort {
 
     private final List<Notification> rows = new ArrayList<>();
 
-    /** Todas las notificaciones guardadas, en orden. */
+    /** Every notification saved, in order. */
     public List<Notification> all() {
         return List.copyOf(rows);
     }
