@@ -15,8 +15,12 @@ import com.rentamovil.booking.domain.exception.InvalidDateRangeException;
 import com.rentamovil.booking.domain.exception.InvalidStatusTransitionException;
 
 /**
- * Tests del dominio: sin Spring, sin base de datos (hexagonal-architecture.md, sección 8).
- * Verifican las invariantes de 02-domain/entities-and-rules.md.
+ * Domain tests: no Spring, no database (hexagonal-architecture.md, section 8).
+ * Verify the invariants from 02-domain/entities-and-rules.md.
+ *
+ * <p>Some assertions check {@code hasMessageContaining(...)} against the production exception
+ * message, which is in Spanish (production code wasn't translated, only this test file) — those
+ * substrings are intentionally left in Spanish to match the real thrown message.
  */
 class ReservationTest {
 
@@ -28,7 +32,7 @@ class ReservationTest {
                 new BigDecimal("120000.00"), BigDecimal.ZERO);
     }
 
-    /** La reserva debe estar CONFIRMED para poder probar la mayoría de transiciones. */
+    /** The reservation must be CONFIRMED to test most transitions. */
     private Reservation confirmed() {
         return newReservation()
                 .transitionTo(ReservationStatus.PENDING_REVIEW)
@@ -36,32 +40,32 @@ class ReservationTest {
     }
 
     @Test
-    @DisplayName("Una reserva nueva nace en PENDING_PAYMENT, nunca CONFIRMED")
-    void nuevaResanzaArrancaEnPENDINGPayment() {
+    @DisplayName("A new reservation is born PENDING_PAYMENT, never CONFIRMED")
+    void newReservationStartsInPendingPayment() {
         assertThat(newReservation().getStatus()).isEqualTo(ReservationStatus.PENDING_PAYMENT);
     }
 
     @Test
-    @DisplayName("INV-008: el total es siempre la suma de los dos subtotales")
-    void totalEsLaSumaDeLosSubtotales() {
-        Reservation conSeguro = Reservation.create(1, 301, 1, 10, 11, START, END,
+    @DisplayName("INV-008: the total is always the sum of the two subtotals")
+    void totalIsTheSumOfBothSubtotals() {
+        Reservation withInsurance = Reservation.create(1, 301, 1, 10, 11, START, END,
                 new BigDecimal("120000.00"), new BigDecimal("40000.00"));
 
-        assertThat(conSeguro.getTotalAmount()).isEqualByComparingTo("160000.00");
+        assertThat(withInsurance.getTotalAmount()).isEqualByComparingTo("160000.00");
     }
 
     @Test
-    @DisplayName("El seguro ausente se guarda como 0, no como null")
-    void seguroAusenteEsCero() {
-        Reservation sinSeguro = Reservation.create(1, 301, null, 10, 11, START, END,
+    @DisplayName("Missing insurance is saved as 0, not as null")
+    void missingInsuranceIsSavedAsZero() {
+        Reservation withoutInsurance = Reservation.create(1, 301, null, 10, 11, START, END,
                 new BigDecimal("120000.00"), null);
 
-        assertThat(sinSeguro.getInsuranceSubtotal()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(withoutInsurance.getInsuranceSubtotal()).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
     @Test
-    @DisplayName("HU-BOOKING-003 escenario 2: la devolución debe ser posterior a la recogida")
-    void fechaDeDevolucionInvalida() {
+    @DisplayName("HU-BOOKING-003 scenario 2: the return must be after the pickup")
+    void returnDateMustBeAfterPickup() {
         assertThatThrownBy(() -> Reservation.create(1, 301, null, 10, 11, START, START,
                 BigDecimal.ZERO, BigDecimal.ZERO))
                 .isInstanceOf(InvalidDateRangeException.class)
@@ -69,116 +73,116 @@ class ReservationTest {
     }
 
     @Test
-    @DisplayName("Una fecha de devolución anterior a la de recogida también se rechaza")
-    void fechaDeDevolucionAnteriorALaRecogida() {
+    @DisplayName("A return date before the pickup date is also rejected")
+    void returnDateBeforePickupIsAlsoRejected() {
         assertThatThrownBy(() -> Reservation.create(1, 301, null, 10, 11, START,
                 START.minusDays(1), BigDecimal.ZERO, BigDecimal.ZERO))
                 .isInstanceOf(InvalidDateRangeException.class);
     }
 
     @Test
-    @DisplayName("INV-010: una sucursal de devolución distinta de la de recogida es válida")
-    void sucursalDeDevolucionDistintaEsValida() {
-        // pickup=10, return=99: sin recargo y sin error.
-        Reservation reserva = Reservation.create(1, 301, null, 10, 99, START, END,
+    @DisplayName("INV-010: a return branch different from the pickup branch is valid")
+    void differentReturnBranchIsValid() {
+        // pickup=10, return=99: no surcharge, no error.
+        Reservation reservation = Reservation.create(1, 301, null, 10, 99, START, END,
                 new BigDecimal("120000.00"), BigDecimal.ZERO);
 
-        assertThat(reserva.getPickupBranchId()).isNotEqualTo(reserva.getReturnBranchId());
-        assertThat(reserva.getTotalAmount()).isEqualByComparingTo("120000.00");
+        assertThat(reservation.getPickupBranchId()).isNotEqualTo(reservation.getReturnBranchId());
+        assertThat(reservation.getTotalAmount()).isEqualByComparingTo("120000.00");
     }
 
     @Test
-    @DisplayName("PENDING_PAYMENT puede pasar a PENDING_REVIEW")
-    void pendingPaymentAPendingReview() {
+    @DisplayName("PENDING_PAYMENT can move to PENDING_REVIEW")
+    void pendingPaymentMovesToPendingReview() {
         assertThat(newReservation().transitionTo(ReservationStatus.PENDING_REVIEW).getStatus())
                 .isEqualTo(ReservationStatus.PENDING_REVIEW);
     }
 
     @Test
-    @DisplayName("INV-009: una reserva no se CONFIRMA sin pasar por PENDING_REVIEW")
-    void noSePuedeConfirmarSinRevision() {
+    @DisplayName("INV-009: a reservation is not CONFIRMED without going through PENDING_REVIEW")
+    void cannotBeConfirmedWithoutReview() {
         assertThatThrownBy(() -> newReservation().transitionTo(ReservationStatus.CONFIRMED))
                 .isInstanceOf(InvalidStatusTransitionException.class);
     }
 
     @Test
-    @DisplayName("CANCELLED y COMPLETED son estados terminales")
-    void estadosTerminales() {
-        Reservation cancelada = newReservation().transitionTo(ReservationStatus.CANCELLED);
+    @DisplayName("CANCELLED and COMPLETED are terminal states")
+    void terminalStates() {
+        Reservation cancelled = newReservation().transitionTo(ReservationStatus.CANCELLED);
 
-        assertThatThrownBy(() -> cancelada.transitionTo(ReservationStatus.PENDING_PAYMENT))
+        assertThatThrownBy(() -> cancelled.transitionTo(ReservationStatus.PENDING_PAYMENT))
                 .isInstanceOf(InvalidStatusTransitionException.class);
     }
 
     @Test
-    @DisplayName("Aplicar la misma transición dos veces no falla: es idempotente")
-    void transicionIdempotente() {
-        Reservation enRevision = newReservation().transitionTo(ReservationStatus.PENDING_REVIEW);
+    @DisplayName("Applying the same transition twice does not fail: it's idempotent")
+    void idempotentTransition() {
+        Reservation underReview = newReservation().transitionTo(ReservationStatus.PENDING_REVIEW);
 
-        // at-least-once: el mismo PaymentReceiptUploaded puede llegar dos veces.
-        Reservation otraVez = enRevision.transitionTo(ReservationStatus.PENDING_REVIEW);
+        // at-least-once: the same PaymentReceiptUploaded event can arrive twice.
+        Reservation again = underReview.transitionTo(ReservationStatus.PENDING_REVIEW);
 
-        assertThat(otraVez.getStatus()).isEqualTo(ReservationStatus.PENDING_REVIEW);
+        assertThat(again.getStatus()).isEqualTo(ReservationStatus.PENDING_REVIEW);
     }
 
     @Test
-    @DisplayName("INV-016: un rechazo con RETRY_ALLOWED devuelve la reserva a PENDING_PAYMENT")
-    void retryAllowedVuelveAPendingPayment() {
-        Reservation enRevision = newReservation().transitionTo(ReservationStatus.PENDING_REVIEW);
+    @DisplayName("INV-016: a rejection with RETRY_ALLOWED sends the reservation back to PENDING_PAYMENT")
+    void retryAllowedReturnsToPendingPayment() {
+        Reservation underReview = newReservation().transitionTo(ReservationStatus.PENDING_REVIEW);
 
-        assertThat(enRevision.transitionTo(ReservationStatus.PENDING_PAYMENT).getStatus())
+        assertThat(underReview.transitionTo(ReservationStatus.PENDING_PAYMENT).getStatus())
                 .isEqualTo(ReservationStatus.PENDING_PAYMENT);
     }
 
     @Test
-    @DisplayName("Cambiar la sucursal de devolución no toca las fechas ni el precio")
-    void cambiarSucursalNoTocaFechasNiPrecio() {
-        Reservation reserva = confirmed();
+    @DisplayName("Changing the return branch doesn't touch the dates or the price")
+    void changingTheBranchDoesNotTouchDatesOrPrice() {
+        Reservation reservation = confirmed();
 
-        Reservation cambiada = reserva.changeReturnBranch(99, END.minusDays(10));
+        Reservation changed = reservation.changeReturnBranch(99, END.minusDays(10));
 
-        assertThat(cambiada.getStartDate()).isEqualTo(START);
-        assertThat(cambiada.getEndDate()).isEqualTo(END);
-        assertThat(cambiada.getTotalAmount()).isEqualByComparingTo(reserva.getTotalAmount());
+        assertThat(changed.getStartDate()).isEqualTo(START);
+        assertThat(changed.getEndDate()).isEqualTo(END);
+        assertThat(changed.getTotalAmount()).isEqualByComparingTo(reservation.getTotalAmount());
     }
 
     @Test
-    @DisplayName("Una reserva cancelada o completada ya no cambia de sucursal")
-    void reservaCerradaNoCambiaDeSucursal() {
-        Reservation cancelada = newReservation().transitionTo(ReservationStatus.CANCELLED);
-        Reservation completada = confirmed().transitionTo(ReservationStatus.COMPLETED);
+    @DisplayName("A cancelled or completed reservation no longer changes branch")
+    void aClosedReservationCannotChangeBranch() {
+        Reservation cancelled = newReservation().transitionTo(ReservationStatus.CANCELLED);
+        Reservation completed = confirmed().transitionTo(ReservationStatus.COMPLETED);
 
-        assertThatThrownBy(() -> cancelada.changeReturnBranch(99, END.minusDays(10)))
+        assertThatThrownBy(() -> cancelled.changeReturnBranch(99, END.minusDays(10)))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("cancelada");
-        assertThatThrownBy(() -> completada.changeReturnBranch(99, END.minusDays(10)))
+        assertThatThrownBy(() -> completed.changeReturnBranch(99, END.minusDays(10)))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("completada");
     }
 
     @Test
-    @DisplayName("INV-013: la sucursal de devolución se cambia hasta 3 días antes de end_date")
-    void sucursalSeCambiaDentroDelPlazo() {
-        Reservation reserva = confirmed();
-        LocalDateTime conTiempo = END.minusDays(10);
+    @DisplayName("INV-013: the return branch can be changed up to 3 days before end_date")
+    void branchCanBeChangedWithinTheDeadline() {
+        Reservation reservation = confirmed();
+        LocalDateTime withTimeToSpare = END.minusDays(10);
 
-        assertThat(reserva.changeReturnBranch(99, conTiempo).getReturnBranchId()).isEqualTo(99);
+        assertThat(reservation.changeReturnBranch(99, withTimeToSpare).getReturnBranchId()).isEqualTo(99);
     }
 
     @Test
-    @DisplayName("INV-013: pasado el plazo la sucursal de devolución ya no se puede cambiar")
-    void sucursalBloqueadaPasadoElPlazo() {
-        Reservation reserva = confirmed();
-        LocalDateTime despuesDelPlazo = END.minusDays(2);
+    @DisplayName("INV-013: past the deadline the return branch can no longer be changed")
+    void branchCannotBeChangedPastTheDeadline() {
+        Reservation reservation = confirmed();
+        LocalDateTime pastTheDeadline = END.minusDays(2);
 
-        assertThatThrownBy(() -> reserva.changeReturnBranch(99, despuesDelPlazo))
+        assertThatThrownBy(() -> reservation.changeReturnBranch(99, pastTheDeadline))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("3 días");
     }
 
     @Test
-    @DisplayName("Un subtotal negativo se rechaza")
-    void subtotalNegativoSeRechaza() {
+    @DisplayName("A negative subtotal is rejected")
+    void negativeSubtotalIsRejected() {
         assertThatThrownBy(() -> Reservation.create(1, 301, null, 10, 11, START, END,
                 new BigDecimal("-1.00"), BigDecimal.ZERO))
                 .isInstanceOf(BusinessRuleException.class);
