@@ -17,6 +17,9 @@ import lombok.RequiredArgsConstructor;
 /**
  * Lee el access token del header Authorization y lo verifica con la clave pública de iam.
  * Si falta o no es válido responde 401.
+ *
+ * <p>Si no hay header, cae a {@code ?token=}: lo único que lo necesita es el stream SSE de
+ * notificaciones, porque EventSource no puede mandar headers propios.
  */
 @Component
 @RequiredArgsConstructor
@@ -36,9 +39,16 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
     public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                   NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
         String authorization = webRequest.getHeader(HttpHeaders.AUTHORIZATION);
-        if (authorization == null || !authorization.startsWith(BEARER)) {
+        String token;
+        if (authorization != null && authorization.startsWith(BEARER)) {
+            token = authorization.substring(BEARER.length());
+        } else {
+            token = webRequest.getParameter("token");
+        }
+
+        if (token == null || token.isBlank()) {
             throw new InvalidTokenException("Falta el token de acceso");
         }
-        return jwtVerifier.verify(authorization.substring(BEARER.length()));
+        return jwtVerifier.verify(token);
     }
 }
