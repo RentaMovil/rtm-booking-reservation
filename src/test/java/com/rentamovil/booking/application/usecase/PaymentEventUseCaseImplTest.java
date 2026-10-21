@@ -17,6 +17,7 @@ import com.rentamovil.booking.domain.exception.BusinessRuleException;
 import com.rentamovil.booking.domain.exception.InvalidStatusTransitionException;
 import com.rentamovil.booking.support.InMemoryNotificationRepository;
 import com.rentamovil.booking.support.InMemoryReservationRepository;
+import com.rentamovil.booking.support.NoOpRealtimeNotification;
 
 /**
  * Reactions to payment and fleet events: transitions, notifications and idempotency.
@@ -34,7 +35,8 @@ class PaymentEventUseCaseImplTest {
 
     private final InMemoryReservationRepository reservations = new InMemoryReservationRepository();
     private final InMemoryNotificationRepository notifications = new InMemoryNotificationRepository();
-    private final PaymentEventUseCaseImpl useCase = new PaymentEventUseCaseImpl(reservations, notifications);
+    private final PaymentEventUseCaseImpl useCase =
+            new PaymentEventUseCaseImpl(reservations, notifications, new NoOpRealtimeNotification());
 
     private void givenReservation(ReservationStatus status) {
         reservations.put(Reservation.restore(RESERVATION_ID, CLIENT_ID, 301, null, 1, 2,
