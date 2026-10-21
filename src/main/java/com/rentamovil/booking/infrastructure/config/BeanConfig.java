@@ -17,6 +17,7 @@ import com.rentamovil.booking.domain.port.out.AuditPort;
 import com.rentamovil.booking.domain.port.out.DomainEventPublisherPort;
 import com.rentamovil.booking.domain.port.out.InsuranceTypeRepositoryPort;
 import com.rentamovil.booking.domain.port.out.NotificationRepositoryPort;
+import com.rentamovil.booking.domain.port.out.RealtimeNotificationPort;
 import com.rentamovil.booking.domain.port.out.RentalRepositoryPort;
 import com.rentamovil.booking.domain.port.out.ReservationRepositoryPort;
 import com.rentamovil.booking.domain.port.out.VehicleAvailabilityPort;
@@ -32,11 +33,12 @@ public class BeanConfig {
     public ReservationUseCases reservationUseCases(ReservationRepositoryPort reservationRepository,
                                                    InsuranceTypeRepositoryPort insuranceTypeRepository,
                                                    NotificationRepositoryPort notificationRepository,
+                                                   RealtimeNotificationPort realtimeNotification,
                                                    VehicleAvailabilityPort vehicleAvailability,
                                                    DomainEventPublisherPort events,
                                                    AuditPort audit) {
         return new ReservationUseCaseImpl(reservationRepository, insuranceTypeRepository,
-                notificationRepository, vehicleAvailability, events, audit);
+                notificationRepository, realtimeNotification, vehicleAvailability, events, audit);
     }
 
     @Bean
@@ -59,7 +61,8 @@ public class BeanConfig {
 
     @Bean
     public PaymentEventUseCases paymentEventUseCases(ReservationRepositoryPort reservationRepository,
-                                                     NotificationRepositoryPort notificationRepository) {
-        return new PaymentEventUseCaseImpl(reservationRepository, notificationRepository);
+                                                     NotificationRepositoryPort notificationRepository,
+                                                     RealtimeNotificationPort realtimeNotification) {
+        return new PaymentEventUseCaseImpl(reservationRepository, notificationRepository, realtimeNotification);
     }
 }

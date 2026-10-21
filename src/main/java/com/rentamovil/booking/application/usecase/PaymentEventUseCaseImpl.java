@@ -10,6 +10,7 @@ import com.rentamovil.booking.domain.enums.ReservationStatus;
 import com.rentamovil.booking.domain.exception.BusinessRuleException;
 import com.rentamovil.booking.domain.port.in.PaymentEventUseCases;
 import com.rentamovil.booking.domain.port.out.NotificationRepositoryPort;
+import com.rentamovil.booking.domain.port.out.RealtimeNotificationPort;
 import com.rentamovil.booking.domain.port.out.ReservationRepositoryPort;
 
 /**
@@ -36,11 +37,14 @@ public class PaymentEventUseCaseImpl implements PaymentEventUseCases {
 
     private final ReservationRepositoryPort reservationRepository;
     private final NotificationRepositoryPort notificationRepository;
+    private final RealtimeNotificationPort realtimeNotification;
 
     public PaymentEventUseCaseImpl(ReservationRepositoryPort reservationRepository,
-                                   NotificationRepositoryPort notificationRepository) {
+                                   NotificationRepositoryPort notificationRepository,
+                                   RealtimeNotificationPort realtimeNotification) {
         this.reservationRepository = reservationRepository;
         this.notificationRepository = notificationRepository;
+        this.realtimeNotification = realtimeNotification;
     }
 
     @Override
@@ -51,8 +55,12 @@ public class PaymentEventUseCaseImpl implements PaymentEventUseCases {
         }
 
         // Solo desde PENDING_PAYMENT: transitionTo rechaza el resto (por ejemplo, una CANCELLED).
-        // Sin notificación: el CHECK de booking.notification no tiene un tipo para este evento.
+        // Sin fila en notification: el CHECK de booking.notification no tiene un tipo para este
+        // evento todavía. El Administrador sí se entera, pero solo en vivo (ver RealtimeNotificationPort).
         reservationRepository.save(reservation.transitionTo(ReservationStatus.PENDING_REVIEW));
+        realtimeNotification.pushToAdmins("PAYMENT_SUBMITTED",
+                "Comprobante subido para la reserva #" + reservationId + ". Pendiente de revisión.",
+                reservationId);
         return true;
     }
 
@@ -123,10 +131,11 @@ public class PaymentEventUseCaseImpl implements PaymentEventUseCases {
         if (notificationRepository.existsByMaintenanceIdAndPersonId(maintenanceId, personId)) {
             return false;
         }
-        notificationRepository.save(Notification.aboutMaintenance(personId,
+        Notification saved = notificationRepository.save(Notification.aboutMaintenance(personId,
                 NotificationType.MAINTENANCE_COMPLETED,
                 "El mantenimiento de " + vehicleName + " terminó. Ya puedes volver a reservarlo.",
                 maintenanceId));
+        realtimeNotification.pushToUser(saved);
         return true;
     }
 
@@ -138,7 +147,8 @@ public class PaymentEventUseCaseImpl implements PaymentEventUseCases {
 
     private void notify(Reservation reservation, NotificationType type, String message,
                         Integer paymentId, Integer invoiceId) {
-        notificationRepository.save(Notification.aboutPayment(reservation.getClientId(), type, message,
-                reservation.getId(), paymentId, invoiceId));
+        Notification saved = notificationRepository.save(Notification.aboutPayment(reservation.getClientId(),
+                type, message, reservation.getId(), paymentId, invoiceId));
+        realtimeNotification.pushToUser(saved);
     }
 }
