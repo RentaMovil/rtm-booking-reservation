@@ -1,5 +1,7 @@
 package com.rentamovil.booking.infrastructure.web.controller;
 
+import java.util.List;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,5 +30,14 @@ public class InternalRentalController {
     @GetMapping("/{id}")
     public InternalRentalResponse findById(@PathVariable Integer id) {
         return InternalRentalResponse.from(rentals.findById(id));
+    }
+
+    /**
+     * Para que telemetry-gps reconstruya su estado en memoria al arrancar (ActiveTrackingPort no
+     * sobrevive un reinicio): qué gpsId tiene una renta IN_PROGRESS ahora mismo.
+     */
+    @GetMapping("/active")
+    public List<InternalRentalResponse> findActive() {
+        return rentals.findInProgress().stream().map(InternalRentalResponse::from).toList();
     }
 }
