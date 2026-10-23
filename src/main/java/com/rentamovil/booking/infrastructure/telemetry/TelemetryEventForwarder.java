@@ -34,11 +34,13 @@ public class TelemetryEventForwarder {
 
     public TelemetryEventForwarder(DomainEventPublisherPort events,
                                    @Value("${app.booking-reservation.telemetry-url}") String telemetryUrl,
-                                   @Value("${app.booking-reservation.telemetry-timeout}") Duration timeout) {
+                                   @Value("${app.booking-reservation.telemetry-timeout}") Duration timeout,
+                                   @Value("${app.internal.api-key}") String internalApiKey) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(timeout);
         requestFactory.setReadTimeout(timeout);
-        this.restClient = RestClient.builder().baseUrl(telemetryUrl).requestFactory(requestFactory).build();
+        this.restClient = RestClient.builder().baseUrl(telemetryUrl).requestFactory(requestFactory)
+                .defaultHeader("X-Internal-Key", internalApiKey).build();
 
         events.subscribe("RentalStarted", this::forward);
         events.subscribe("RentalCompleted", this::forward);

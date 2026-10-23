@@ -36,11 +36,13 @@ public class FleetEventForwarder {
 
     public FleetEventForwarder(DomainEventPublisherPort events,
                                @Value("${app.booking-reservation.fleet-url}") String fleetUrl,
-                               @Value("${app.booking-reservation.fleet-timeout}") Duration timeout) {
+                               @Value("${app.booking-reservation.fleet-timeout}") Duration timeout,
+                               @Value("${app.internal.api-key}") String internalApiKey) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(timeout);
         requestFactory.setReadTimeout(timeout);
-        this.restClient = RestClient.builder().baseUrl(fleetUrl).requestFactory(requestFactory).build();
+        this.restClient = RestClient.builder().baseUrl(fleetUrl).requestFactory(requestFactory)
+                .defaultHeader("X-Internal-Key", internalApiKey).build();
 
         events.subscribe("RentalStarted", this::forward);
         events.subscribe("RentalCompleted", this::forward);
