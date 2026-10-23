@@ -12,7 +12,7 @@ services:
       DATABASE_URL: jdbc:sqlserver://sqlserver:1433;databaseName=rentamovil;encrypt=true;trustServerCertificate=true
       FLEET_URL: http://fleet-maintenance:3002
     ports:
-      - "${APP_BOOKING_RESERVATION_PORT:-3003}:3003"
+      - "127.0.0.1:${APP_BOOKING_RESERVATION_PORT:-3003}:3003"
     networks:
       rentamovil:
         # El gateway la encuentra con este nombre: http://booking-reservation:3003
