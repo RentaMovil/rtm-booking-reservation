@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.rentamovil.booking.domain.port.in.ReservationUseCases;
-import com.rentamovil.booking.domain.port.out.ReservationRepositoryPort.OccupiedRange;
 import com.rentamovil.booking.infrastructure.web.dto.VehicleOccupancyResponse;
 
 import lombok.RequiredArgsConstructor;
