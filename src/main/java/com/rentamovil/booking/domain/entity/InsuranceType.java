@@ -17,7 +17,7 @@ public class InsuranceType {
 
     private final Integer id;
     private final String name;
-    private final String coverageDetails;
+    private final String coverageDetails;/**Detalles de la cobertura */
     private final BigDecimal dailyCost;
 
     private InsuranceType(Integer id, String name, String coverageDetails, BigDecimal dailyCost) {
