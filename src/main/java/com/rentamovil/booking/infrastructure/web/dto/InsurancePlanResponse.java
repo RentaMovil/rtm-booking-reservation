@@ -1,8 +1,6 @@
 package com.rentamovil.booking.infrastructure.web.dto;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
 import com.rentamovil.booking.domain.entity.InsuranceType;
 
 import lombok.Getter;
