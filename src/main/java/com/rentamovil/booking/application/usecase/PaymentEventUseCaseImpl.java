@@ -10,6 +10,7 @@ import com.rentamovil.booking.domain.enums.ReservationStatus;
 import com.rentamovil.booking.domain.exception.BusinessRuleException;
 import com.rentamovil.booking.domain.port.in.PaymentEventUseCases;
 import com.rentamovil.booking.domain.port.out.NotificationRepositoryPort;
+import com.rentamovil.booking.domain.port.out.PushNotificationPort;
 import com.rentamovil.booking.domain.port.out.RealtimeNotificationPort;
 import com.rentamovil.booking.domain.port.out.ReservationRepositoryPort;
 
@@ -38,13 +39,16 @@ public class PaymentEventUseCaseImpl implements PaymentEventUseCases {
     private final ReservationRepositoryPort reservationRepository;
     private final NotificationRepositoryPort notificationRepository;
     private final RealtimeNotificationPort realtimeNotification;
+    private final PushNotificationPort pushNotification;
 
     public PaymentEventUseCaseImpl(ReservationRepositoryPort reservationRepository,
                                    NotificationRepositoryPort notificationRepository,
-                                   RealtimeNotificationPort realtimeNotification) {
+                                   RealtimeNotificationPort realtimeNotification,
+                                   PushNotificationPort pushNotification) {
         this.reservationRepository = reservationRepository;
         this.notificationRepository = notificationRepository;
         this.realtimeNotification = realtimeNotification;
+        this.pushNotification = pushNotification;
     }
 
     @Override
@@ -136,6 +140,7 @@ public class PaymentEventUseCaseImpl implements PaymentEventUseCases {
                 "El mantenimiento de " + vehicleName + " terminó. Ya puedes volver a reservarlo.",
                 maintenanceId));
         realtimeNotification.pushToUser(saved);
+        pushNotification.sendToUser(saved);
         return true;
     }
 
@@ -150,5 +155,6 @@ public class PaymentEventUseCaseImpl implements PaymentEventUseCases {
         Notification saved = notificationRepository.save(Notification.aboutPayment(reservation.getClientId(),
                 type, message, reservation.getId(), paymentId, invoiceId));
         realtimeNotification.pushToUser(saved);
+        pushNotification.sendToUser(saved);
     }
 }
