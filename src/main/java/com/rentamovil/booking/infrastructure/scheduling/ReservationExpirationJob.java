@@ -77,7 +77,7 @@ public class ReservationExpirationJob {
 
                 notificationRepository.save(Notification.aboutReservation(
                         cancelled.getClientId(), NotificationType.RESERVATION_EXPIRED,
-                        "Tu reserva #" + cancelled.getId() + " expiró: no recibimos el pago a tiempo.",
+                        "Tu reserva expiró: no recibimos el pago a tiempo.",
                         cancelled.getId()));
 
                 // user_id NULL: no hay actor humano detrás de esta cancelación.
