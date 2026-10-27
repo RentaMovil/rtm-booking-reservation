@@ -80,7 +80,7 @@ public class PaymentEventUseCaseImpl implements PaymentEventUseCases {
                 .save(reservation.transitionTo(ReservationStatus.CONFIRMED));
 
         notify(confirmed, NotificationType.PAYMENT_APPROVED,
-                "Tu pago de la reserva #" + reservationId + " fue aprobado. La reserva está confirmada.",
+                "Tu pago fue aprobado. La reserva está confirmada.",
                 paymentId, null);
         return true;
     }
@@ -108,9 +108,9 @@ public class PaymentEventUseCaseImpl implements PaymentEventUseCases {
         String reason = rejectionReason == null ? "" : "Motivo: " + rejectionReason;
         String message = target == ReservationStatus.CANCELLED
                 // INV-016: el Administrador se rindió con esta reserva.
-                ? "Tu pago de la reserva #" + reservationId + " fue rechazado y la reserva fue cancelada. " + reason
+                ? "Tu pago fue rechazado y la reserva fue cancelada. " + reason
                 // El cliente puede volver a subir un comprobante.
-                : "Tu pago de la reserva #" + reservationId + " fue rechazado. Puedes subir otro comprobante. " + reason;
+                : "Tu pago fue rechazado. Puedes subir otro comprobante. " + reason;
         notify(updated, NotificationType.PAYMENT_REJECTED, message.trim(), paymentId, null);
         return true;
     }
@@ -126,7 +126,7 @@ public class PaymentEventUseCaseImpl implements PaymentEventUseCases {
         // porque ambos ocurren en el mismo momento (events.md). Si alguna vez hay que
         // distinguirlos en la campanita, hace falta agregar un valor al CHECK de la tabla.
         notify(reservation, NotificationType.PAYMENT_APPROVED,
-                "Tu factura de la reserva #" + reservationId + " ya está disponible.", paymentId, invoiceId);
+                "Tu factura ya está disponible.", paymentId, invoiceId);
         return true;
     }
 

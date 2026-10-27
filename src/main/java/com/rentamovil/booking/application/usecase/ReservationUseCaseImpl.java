@@ -106,7 +106,7 @@ public class ReservationUseCaseImpl implements ReservationUseCases {
 
         Notification clientNotification = notificationRepository.save(Notification.aboutReservation(clientId,
                 NotificationType.RESERVATION_CREATED,
-                "Tu reserva #" + saved.getId() + " fue creada. Falta subir el comprobante de pago.",
+                "Tu reserva fue creada. Falta subir el comprobante de pago.",
                 saved.getId()));
         realtimeNotification.pushToUser(clientNotification);
         pushNotification.sendToUser(clientNotification);
@@ -163,7 +163,7 @@ public class ReservationUseCaseImpl implements ReservationUseCases {
                 "clientId", clientId));
 
         notificationRepository.save(Notification.aboutReservation(clientId,
-                NotificationType.RESERVATION_CANCELLED, "Tu reserva #" + id + " fue cancelada.", id));
+                NotificationType.RESERVATION_CANCELLED, "Tu reserva fue cancelada.", id));
 
         audit.record(clientId, "RESERVATION_CANCELLED", "reservation", id, null);
         return cancelled;
@@ -191,7 +191,7 @@ public class ReservationUseCaseImpl implements ReservationUseCases {
                 "reservationId", id, "newReturnBranchId", newReturnBranchId));
         notificationRepository.save(Notification.aboutReservation(clientId,
                 NotificationType.RESERVATION_RETURN_BRANCH_CHANGED,
-                "La sucursal de devolución de tu reserva #" + id + " cambió.", id));
+                "La sucursal de devolución de tu reserva cambió.", id));
 
         audit.record(clientId, "RESERVATION_MODIFIED", "reservation", id, null);
         return saved;
