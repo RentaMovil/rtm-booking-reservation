@@ -18,6 +18,7 @@ import com.rentamovil.booking.domain.port.out.AuditPort;
 import com.rentamovil.booking.domain.port.out.DomainEventPublisherPort;
 import com.rentamovil.booking.domain.port.out.InsuranceTypeRepositoryPort;
 import com.rentamovil.booking.domain.port.out.NotificationRepositoryPort;
+import com.rentamovil.booking.domain.port.out.PushNotificationPort;
 import com.rentamovil.booking.domain.port.out.RealtimeNotificationPort;
 import com.rentamovil.booking.domain.port.out.ReservationRepositoryPort;
 import com.rentamovil.booking.domain.port.out.ReservationRepositoryPort.OccupiedRange;
@@ -30,6 +31,7 @@ public class ReservationUseCaseImpl implements ReservationUseCases {
     private final InsuranceTypeRepositoryPort insuranceTypeRepository;
     private final NotificationRepositoryPort notificationRepository;
     private final RealtimeNotificationPort realtimeNotification;
+    private final PushNotificationPort pushNotification;
     private final VehicleAvailabilityPort vehicleAvailability;
     private final DomainEventPublisherPort events;
     private final AuditPort audit;
@@ -38,6 +40,7 @@ public class ReservationUseCaseImpl implements ReservationUseCases {
                                    InsuranceTypeRepositoryPort insuranceTypeRepository,
                                    NotificationRepositoryPort notificationRepository,
                                    RealtimeNotificationPort realtimeNotification,
+                                   PushNotificationPort pushNotification,
                                    VehicleAvailabilityPort vehicleAvailability,
                                    DomainEventPublisherPort events,
                                    AuditPort audit) {
@@ -45,6 +48,7 @@ public class ReservationUseCaseImpl implements ReservationUseCases {
         this.insuranceTypeRepository = insuranceTypeRepository;
         this.notificationRepository = notificationRepository;
         this.realtimeNotification = realtimeNotification;
+        this.pushNotification = pushNotification;
         this.vehicleAvailability = vehicleAvailability;
         this.events = events;
         this.audit = audit;
@@ -99,9 +103,10 @@ public class ReservationUseCaseImpl implements ReservationUseCases {
 
         Notification clientNotification = notificationRepository.save(Notification.aboutReservation(clientId,
                 NotificationType.RESERVATION_CREATED,
-                "Tu reserva #" + saved.getId() + " fue creada. Falta subir el comprobante de pago.",
+                "Tu reserva fue creada. Falta subir el comprobante de pago.",
                 saved.getId()));
         realtimeNotification.pushToUser(clientNotification);
+        pushNotification.sendToUser(clientNotification);
 
         // El Administrador necesita enterarse de que hay una reserva nueva (HU-BOOKING-008).
         // Solo en vivo: no hay fila propia para "cualquier admin conectado" (ver RealtimeNotificationPort).
@@ -152,7 +157,7 @@ public class ReservationUseCaseImpl implements ReservationUseCases {
                 "reservationId", id, "newReturnBranchId", newReturnBranchId));
         notificationRepository.save(Notification.aboutReservation(clientId,
                 NotificationType.RESERVATION_RETURN_BRANCH_CHANGED,
-                "La sucursal de devolución de tu reserva #" + id + " cambió.", id));
+                "La sucursal de devolución de tu reserva cambió.", id));
 
         audit.record(clientId, "RESERVATION_MODIFIED", "reservation", id, null);
         return saved;

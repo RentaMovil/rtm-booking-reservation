@@ -10,6 +10,7 @@ import com.rentamovil.booking.domain.enums.ReservationStatus;
 import com.rentamovil.booking.domain.exception.BusinessRuleException;
 import com.rentamovil.booking.domain.port.in.PaymentEventUseCases;
 import com.rentamovil.booking.domain.port.out.NotificationRepositoryPort;
+import com.rentamovil.booking.domain.port.out.PushNotificationPort;
 import com.rentamovil.booking.domain.port.out.RealtimeNotificationPort;
 import com.rentamovil.booking.domain.port.out.ReservationRepositoryPort;
 
@@ -38,13 +39,16 @@ public class PaymentEventUseCaseImpl implements PaymentEventUseCases {
     private final ReservationRepositoryPort reservationRepository;
     private final NotificationRepositoryPort notificationRepository;
     private final RealtimeNotificationPort realtimeNotification;
+    private final PushNotificationPort pushNotification;
 
     public PaymentEventUseCaseImpl(ReservationRepositoryPort reservationRepository,
                                    NotificationRepositoryPort notificationRepository,
-                                   RealtimeNotificationPort realtimeNotification) {
+                                   RealtimeNotificationPort realtimeNotification,
+                                   PushNotificationPort pushNotification) {
         this.reservationRepository = reservationRepository;
         this.notificationRepository = notificationRepository;
         this.realtimeNotification = realtimeNotification;
+        this.pushNotification = pushNotification;
     }
 
     @Override
@@ -76,7 +80,7 @@ public class PaymentEventUseCaseImpl implements PaymentEventUseCases {
                 .save(reservation.transitionTo(ReservationStatus.CONFIRMED));
 
         notify(confirmed, NotificationType.PAYMENT_APPROVED,
-                "Tu pago de la reserva #" + reservationId + " fue aprobado. La reserva está confirmada.",
+                "Tu pago fue aprobado. La reserva está confirmada.",
                 paymentId, null);
         return true;
     }
@@ -104,9 +108,9 @@ public class PaymentEventUseCaseImpl implements PaymentEventUseCases {
         String reason = rejectionReason == null ? "" : "Motivo: " + rejectionReason;
         String message = target == ReservationStatus.CANCELLED
                 // INV-016: el Administrador se rindió con esta reserva.
-                ? "Tu pago de la reserva #" + reservationId + " fue rechazado y la reserva fue cancelada. " + reason
+                ? "Tu pago fue rechazado y la reserva fue cancelada. " + reason
                 // El cliente puede volver a subir un comprobante.
-                : "Tu pago de la reserva #" + reservationId + " fue rechazado. Puedes subir otro comprobante. " + reason;
+                : "Tu pago fue rechazado. Puedes subir otro comprobante. " + reason;
         notify(updated, NotificationType.PAYMENT_REJECTED, message.trim(), paymentId, null);
         return true;
     }
@@ -122,7 +126,7 @@ public class PaymentEventUseCaseImpl implements PaymentEventUseCases {
         // porque ambos ocurren en el mismo momento (events.md). Si alguna vez hay que
         // distinguirlos en la campanita, hace falta agregar un valor al CHECK de la tabla.
         notify(reservation, NotificationType.PAYMENT_APPROVED,
-                "Tu factura de la reserva #" + reservationId + " ya está disponible.", paymentId, invoiceId);
+                "Tu factura ya está disponible.", paymentId, invoiceId);
         return true;
     }
 
@@ -136,6 +140,7 @@ public class PaymentEventUseCaseImpl implements PaymentEventUseCases {
                 "El mantenimiento de " + vehicleName + " terminó. Ya puedes volver a reservarlo.",
                 maintenanceId));
         realtimeNotification.pushToUser(saved);
+        pushNotification.sendToUser(saved);
         return true;
     }
 
@@ -150,5 +155,6 @@ public class PaymentEventUseCaseImpl implements PaymentEventUseCases {
         Notification saved = notificationRepository.save(Notification.aboutPayment(reservation.getClientId(),
                 type, message, reservation.getId(), paymentId, invoiceId));
         realtimeNotification.pushToUser(saved);
+        pushNotification.sendToUser(saved);
     }
 }
