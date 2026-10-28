@@ -23,11 +23,8 @@ import com.rentamovil.booking.domain.port.out.ReservationRepositoryPort;
 import com.rentamovil.booking.domain.port.out.ReservationRepositoryPort.OccupiedRange;
 import com.rentamovil.booking.domain.port.out.VehicleAvailabilityPort;
 
-/** HU-BOOKING-003, 004, 005, 006 y 008. */
+/** HU-BOOKING-003, 004, 005 y 008. */
 public class ReservationUseCaseImpl implements ReservationUseCases {
-
-    /** INV-004: cancelar solo hasta 3 días antes de la fecha de recogida. */
-    private static final long CANCELLATION_DEADLINE_DAYS = 3;
 
     private final ReservationRepositoryPort reservationRepository;
     private final InsuranceTypeRepositoryPort insuranceTypeRepository;
@@ -131,37 +128,6 @@ public class ReservationUseCaseImpl implements ReservationUseCases {
     public Reservation findById(Integer id) {
         return reservationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("La reserva no existe"));
-    }
-
-    @Override
-    public Reservation cancel(Integer id, Integer clientId) {
-        Reservation reservation = findById(id);
-
-        // No se cancela la reserva de otra persona, aunque se conozca su id.
-        if (!reservation.getClientId().equals(clientId)) {
-            throw new ResourceNotFoundException("La reserva no existe");
-        }
-
-        // INV-004: solo hasta 3 días antes de empezar.
-        LocalDateTime deadline = reservation.getStartDate().minusDays(CANCELLATION_DEADLINE_DAYS);
-        if (LocalDateTime.now().isAfter(deadline)) {
-            throw new BusinessRuleException("CANCELLATION_WINDOW_CLOSED",
-                    "Ya no se puede cancelar: el plazo límite era 3 días antes de la fecha de recogida");
-        }
-
-        // INV-005: cancelar no genera recargo. transitionTo valida que el estado actual lo permita.
-        Reservation cancelled = reservationRepository
-                .save(reservation.transitionTo(ReservationStatus.CANCELLED));
-
-        events.publish("ReservationCancelled", Map.of(
-                "reservationId", id,
-                "clientId", clientId));
-
-        notificationRepository.save(Notification.aboutReservation(clientId,
-                NotificationType.RESERVATION_CANCELLED, "Tu reserva #" + id + " fue cancelada.", id));
-
-        audit.record(clientId, "RESERVATION_CANCELLED", "reservation", id, null);
-        return cancelled;
     }
 
     @Override

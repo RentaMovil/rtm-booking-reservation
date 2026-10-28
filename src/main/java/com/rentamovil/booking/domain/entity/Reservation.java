@@ -170,5 +170,9 @@ public class Reservation {
             throw new InvalidDateRangeException("INVALID_DATE_RANGE",
                     "La fecha de devolución debe ser posterior a la de recogida");
         }
+        if (!startDate.isAfter(LocalDateTime.now())) {
+            throw new InvalidDateRangeException("PICKUP_TIME_PASSED",
+                    "La hora de recogida ya pasó. Elige una hora futura para continuar");
+        }
     }
 }

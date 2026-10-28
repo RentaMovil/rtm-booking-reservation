@@ -26,9 +26,6 @@ public interface ReservationUseCases {
 
     Reservation findById(Integer id);
 
-    /** HU-BOOKING-006: cancelar la propia reserva. INV-004: hasta 3 días antes. INV-005: sin recargo. */
-    Reservation cancel(Integer id, Integer clientId);
-
     /**
      * HU-BOOKING-005: cambiar la sucursal de devolución, lo único modificable de una reserva.
      * INV-013: hasta 3 días antes de end_date.
