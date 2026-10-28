@@ -14,7 +14,7 @@ import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 
 /**
- * Carga al arrancar SOLO la clave pública RS256 de iam (la que publica en GET /jwks).
+ * Carga al arrancar SOLO la clave pública RS256 de iam, copiada a mano en el .env.
  *
  * <p>Este servicio nunca firma tokens, así que no necesita la clave privada: tenerla aquí
  * violaría el motivo por el que iam mantiene la privada sin compartir.
