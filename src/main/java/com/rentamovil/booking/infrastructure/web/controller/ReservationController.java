@@ -24,7 +24,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Reservas del cliente autenticado: HU-BOOKING-003 (crear), 004 (listar/ver), 005 (modificar). La cancelación por el cliente no existe (ADR-015).
+ * Reservas del cliente autenticado: HU-BOOKING-003 (crear), 004 (listar/ver), 005 (modificar),
+ * 006 (cancelar).
  *
  * <p>El titular sale del token (personId), nunca de la URL ni del cuerpo.
  */
@@ -81,5 +82,12 @@ public class ReservationController {
                                       @Valid @RequestBody ModifyReservationRequest request) {
         return ReservationResponse.from(reservations.changeReturnBranch(id, currentUser.getPersonId(),
                 request.getNewReturnBranchId()));
+    }
+
+    /** HU-BOOKING-006: cancelar. INV-004: hasta 3 días antes. INV-005: sin recargo. */
+    @PostMapping("/{id}/cancel")
+    public ReservationResponse cancel(@CurrentUser AuthenticatedUser currentUser,
+                                      @PathVariable Integer id) {
+        return ReservationResponse.from(reservations.cancel(id, currentUser.getPersonId()));
     }
 }
