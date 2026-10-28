@@ -17,7 +17,7 @@ import com.rentamovil.booking.domain.exception.InvalidTokenException;
 /**
  * Verifica los access tokens que firma iam con RS256.
  *
- * <p>Usa solo la clave pública (la que iam publica en GET /jwks): este servicio no puede firmar
+ * <p>Usa solo la clave pública (copiada a mano del .env de iam): este servicio no puede firmar
  * tokens ni tiene la privada. Verifica por su cuenta en vez de llamar a iam por cada petición.
  *
  * <p><b>Temporalmente vuelta a clave estática (revert de A4)</b>: el 2026-10-23 se cambió a
